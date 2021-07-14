@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcp.serverc.mapper.BcpTaskCiphertextMapper">
+  <resultMap id="BaseResultMap" type="com.bcp.serverc.model.BcpTaskCiphertext">
+    <!--
+      WARNING - @mbg.generated
+    -->
+    <id column="task_id" jdbcType="BIGINT" property="taskId" />
+    <id column="task_user_id" jdbcType="VARCHAR" property="taskUserId" />
+    <id column="task_round" jdbcType="DECIMAL" property="taskRound" />
+    <id column="ciphertext_order" jdbcType="DECIMAL" property="ciphertextOrder" />
+    <result column="ciphertext_a" jdbcType="VARBINARY" property="ciphertextA" />
+    <result column="ciphertext_b" jdbcType="VARBINARY" property="ciphertextB" />
+    <result column="ciphertext_h" jdbcType="VARBINARY" property="ciphertextH" />
+  </resultMap>
+</mapper>

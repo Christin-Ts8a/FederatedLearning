@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcp.serverc.mapper.BcpTaskResultMapper">
+
+	<!-- 查询指定任务和用户以及指定或最新轮次的计算结果 -->
+	<select id="getDesignatedOrLatestResult"
+		resultType="com.bcp.serverc.model.BcpTaskResult">
+		select *
+		from BCP_TASK_RESULT
+		<where>
+			<if
+				test="taskIdCollection != null and !taskIdCollection.isEmpty()">
+				and TASK_ID in
+				<foreach item="item" index="index"
+					collection="taskIdCollection" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="userId != null">
+				and TASK_USER_ID = #{userId}
+			</if>
+			<if test="round != null">
+				and TASK_ROUND = #{round}
+			</if>
+			<if test="isLatest != null and isLatest == true">
+				and TASK_ROUND = (
+				select max(r2.TASK_ROUND)
+				from BCP_TASK_RESULT r2
+				<where>
+					<if
+						test="taskIdCollection != null and !taskIdCollection.isEmpty()">
+						and r2.TASK_ID in
+						<foreach item="item" index="index"
+							collection="taskIdCollection" open="(" separator="," close=")">
+							#{item}
+						</foreach>
+					</if>
+					<if test="userId != null">
+						and r2.TASK_USER_ID = #{userId}
+					</if>
+				</where>
+				)
+			</if>
+		</where>
+		order by task_id, task_user_id, task_round, result_order asc
+	</select>
+
+	<resultMap id="BaseResultMap"
+		type="com.bcp.serverc.model.BcpTaskResult">
+		<!-- WARNING - @mbg.generated -->
+		<id column="task_id" jdbcType="BIGINT" property="taskId" />
+		<id column="task_user_id" jdbcType="VARCHAR" property="taskUserId" />
+		<id column="task_round" jdbcType="DECIMAL" property="taskRound" />
+		<id column="result_order" jdbcType="DECIMAL" property="resultOrder" />
+		<result column="task_user_count" jdbcType="DECIMAL"
+			property="taskUserCount" />
+		<result column="result_a" jdbcType="VARBINARY"
+			property="resultA" />
+		<result column="result_b" jdbcType="VARBINARY"
+			property="resultB" />
+		<result column="result_h" jdbcType="VARBINARY"
+			property="resultH" />
+	</resultMap>
+</mapper>

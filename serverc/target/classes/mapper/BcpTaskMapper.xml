@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcp.serverc.mapper.BcpTaskMapper">
+  <resultMap id="BaseResultMap" type="com.bcp.serverc.model.BcpTask">
+    <!--
+      WARNING - @mbg.generated
+    -->
+    <id column="task_id" jdbcType="BIGINT" property="taskId" />
+    <result column="task_name" jdbcType="VARCHAR" property="taskName" />
+    <result column="task_state" jdbcType="DECIMAL" property="taskState" />
+    <result column="compute_rounds" jdbcType="DECIMAL" property="computeRounds" />
+    <result column="current_round" jdbcType="DECIMAL" property="currentRound" />
+    <result column="param_precision" jdbcType="DECIMAL" property="paramPrecision" />
+    <result column="create_user" jdbcType="VARCHAR" property="createUser" />
+    <result column="update_user" jdbcType="VARCHAR" property="updateUser" />
+    <result column="start_user" jdbcType="VARCHAR" property="startUser" />
+    <result column="finish_user" jdbcType="VARCHAR" property="finishUser" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="start_time" jdbcType="TIMESTAMP" property="startTime" />
+    <result column="finish_time" jdbcType="TIMESTAMP" property="finishTime" />
+    <result column="finish_reason" jdbcType="VARCHAR" property="finishReason" />
+    <result column="task_kappa" jdbcType="DECIMAL" property="taskKappa" />
+    <result column="task_certainty" jdbcType="DECIMAL" property="taskCertainty" />
+    <result column="task_n" jdbcType="VARBINARY" property="taskN" />
+    <result column="task_k" jdbcType="VARBINARY" property="taskK" />
+    <result column="task_g" jdbcType="VARBINARY" property="taskG" />
+  </resultMap>
+</mapper>

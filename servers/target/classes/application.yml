@@ -1,0 +1,15 @@
+server:
+  port: 8089
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/bcp_server_s?characterEncoding=UTF-8&useSSL=false
+    username: root
+    password: Qq123903
+    driver-class-name: com.mysql.cj.jdbc.Driver
+mybatis:
+  type-aliases-package: com.bcp.servers.mapper
+
+# 打印sql
+logging:
+  level:
+    com.bcp.servers.mapper : debug

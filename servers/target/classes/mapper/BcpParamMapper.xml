@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcp.servers.mapper.BcpParamMapper">
+    <!--
+      WARNING - @mbg.generated
+    -->
+  <resultMap id="BaseResultMap" type="com.bcp.servers.model.BcpParam">
+    <id column="n" jdbcType="VARCHAR" property="n" />
+    <result column="k" jdbcType="VARCHAR" property="k" />
+    <result column="g" jdbcType="VARCHAR" property="g" />
+    <result column="mp" jdbcType="VARCHAR" property="mp" />
+    <result column="mq" jdbcType="VARCHAR" property="mq" />
+  </resultMap>
+</mapper>
