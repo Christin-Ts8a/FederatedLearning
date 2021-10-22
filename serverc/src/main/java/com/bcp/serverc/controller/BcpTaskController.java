@@ -2,6 +2,7 @@ package com.bcp.serverc.controller;
 
 import java.util.Arrays;
 
+import com.bcp.general.util.JsonResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,10 +45,9 @@ public class BcpTaskController {
 	}
 
 	@RequestMapping(value = "/create", method = RequestMethod.POST)
-	public Object createTask(@RequestBody BcpTask bcpTask) {
+	public JsonResult createTask(@RequestBody BcpTask bcpTask) {
 		Object ret = bcpTaskSrv.createBcpTask(bcpTask);
-
-		return ret;
+		return JsonResult.ok(ret);
 	}
 
 	@RequestMapping(value = "/update", method = RequestMethod.PATCH)

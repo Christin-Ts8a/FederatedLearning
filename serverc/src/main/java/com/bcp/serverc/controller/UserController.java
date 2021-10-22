@@ -4,13 +4,15 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 
+import com.bcp.general.util.JsonResult;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.boot.web.servlet.server.Session;
+import org.springframework.http.HttpRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 import com.bcp.general.crypto.BcpCiphertext;
 import com.bcp.general.crypto.PP;
@@ -47,7 +49,7 @@ public class UserController {
 	@RequestMapping(value = "/list", method = RequestMethod.GET)
 	public Object getUserList() {
 		Object ret = userSrv.getUserList();
-		return ret;
+		return JsonResult.ok(ret);
 	}
 
 	/**
@@ -63,17 +65,6 @@ public class UserController {
 		}
 		return ret;
 	}
-
-	// @RequestMapping(value = "/login", method = RequestMethod.POST)
-	// public Object login(@RequestBody User user, HttpServletRequest request)
-	// throws IOException {
-	// String username = user.getUsername();
-	// String password = user.getPassword();
-	//
-	// // 系统登录认证
-	//
-	// return null;
-	// }
 
 	// 临时客户端用生成公钥及加解密接口
 	@RequestMapping(value = "/keyGen", method = RequestMethod.POST)
@@ -95,4 +86,9 @@ public class UserController {
 		return rtn;
 	}
 
+	@RequestMapping(value = "/test", method = RequestMethod.POST)
+	public String test(@RequestParam(value = "username", required = false) String username) {
+		System.out.println("username: " + username);
+		return username;
+	}
 }

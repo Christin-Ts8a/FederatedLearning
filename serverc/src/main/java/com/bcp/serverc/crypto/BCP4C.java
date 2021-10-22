@@ -7,12 +7,12 @@ import java.util.stream.Stream;
 
 import javax.validation.Valid;
 
-import org.apache.commons.collections.CollectionUtils;
 
 import com.bcp.general.crypto.BcpBlindCiphertext;
 import com.bcp.general.crypto.BcpCiphertext;
 import com.bcp.general.crypto.PP;
 import com.bcp.general.constant.BCPConstant;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -173,7 +173,7 @@ public class BCP4C implements BCPConstant {
 	public static List<? extends BcpCiphertext> add(BigInteger N, List<? extends BcpCiphertext> aList,
 			List<? extends BcpCiphertext> bList) {
 		List<BcpCiphertext> resultList = new ArrayList<>();
-		if (CollectionUtils.isNotEmpty(aList) && CollectionUtils.isNotEmpty(bList)) {
+		if (!CollectionUtils.isEmpty(aList) && !CollectionUtils.isEmpty(bList)) {
 			if (aList.size() != bList.size()) {
 				throw new IllegalArgumentException(
 						"size of a:" + aList.size() + " is not equals to size of b:" + bList.size());

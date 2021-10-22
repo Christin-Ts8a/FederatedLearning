@@ -1,9 +1,8 @@
 server:
   port: 8088
-
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/bcp_server_c?characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC
+    url: jdbc:mysql://localhost:3306/bcp_server_c?characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
     password: Qq123903
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -20,3 +19,7 @@ mybatis:
 logging:
   level:
     com.bcp.serverc.mapper : debug
+
+management:
+  security:
+    enabled: true

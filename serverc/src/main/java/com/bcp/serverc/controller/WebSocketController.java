@@ -1,5 +1,6 @@
 package com.bcp.serverc.controller;
 
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,13 +17,13 @@ public class WebSocketController {
 
 	/**
 	 * 当没有传递connect_message参数时，默认将userId作为参数转发至ws服务
-	 * 
-	 * @param userId
+	 *
 	 * @return
 	 */
 	@GetMapping("/webSocket")
 	public ModelAndView socket() {
 		String userId = UserServiceImpl.getCurrentLoginUserId();
+//		System.out.println("userId: " + userId);
 		if (userId == null) {
 			// 若未登录则返回空
 			return null;
