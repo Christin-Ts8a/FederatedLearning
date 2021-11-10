@@ -38,8 +38,8 @@ public class BcpTaskController {
 	 * @return
 	 */
 	@RequestMapping(value = "/list", method = RequestMethod.GET)
-	public Object getTaskList(String userId) {
-		Object ret = bcpTaskSrv.getTaskList(userId, false);
+	public Object getTaskList(String username) {
+		Object ret = bcpTaskSrv.getTaskList(username, false);
 
 		return ret;
 	}
@@ -71,9 +71,9 @@ public class BcpTaskController {
 	}
 
 	@RequestMapping(value = "/getResult", method = RequestMethod.GET)
-	public Object getResult(@RequestParam Long taskId, @RequestParam String userId, @RequestParam Integer round,
+	public Object getResult(@RequestParam Long taskId, @RequestParam String username, @RequestParam Integer round,
 			@RequestParam boolean isLatest) {
-		Object ret = bcpTaskSrv.getDesignatedOrLatestResult(Arrays.asList(taskId), userId, round, isLatest);
+		Object ret = bcpTaskSrv.getDesignatedOrLatestResult(Arrays.asList(taskId), username, round, isLatest);
 		return ret;
 	}
 }

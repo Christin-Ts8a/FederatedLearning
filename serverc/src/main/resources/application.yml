@@ -16,10 +16,6 @@ mybatis:
     map-underscore-to-camel-case: true
 
 # 打印sql执行
-logging:
-  level:
-    com.bcp.serverc.mapper : debug
-
-management:
-  security:
-    enabled: true
+#logging:
+#  level:
+#    com.bcp.serverc.mapper : debug

@@ -15,6 +15,7 @@ import com.bcp.serverc.mapper.BcpTaskMapper;
 import com.bcp.serverc.mapper.BcpTaskResultMapper;
 import com.bcp.serverc.mapper.BcpTaskUserMapper;
 import com.bcp.serverc.model.*;
+import com.bcp.serverc.service.UserService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.SetUtils;
 import org.apache.commons.lang.StringUtils;
@@ -23,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import tk.mybatis.mapper.entity.Example;
 import tk.mybatis.mapper.entity.Example.Criteria;
-
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -36,22 +36,25 @@ import java.util.stream.Collectors;
 public class BcpTaskServiceImpl {
 
 	@Resource
-	BcpTaskMapper bcpTaskMapper;
+	private UserService userService;
 
 	@Resource
-	BcpTaskUserMapper bcpTaskUserMapper;
+	private BcpTaskMapper bcpTaskMapper;
 
 	@Resource
-	BcpTaskCiphertextMapper bcpTaskCiphertextMapper;
+	private BcpTaskUserMapper bcpTaskUserMapper;
 
 	@Resource
-	BcpTaskResultMapper bcpTaskResultMapper;
+	private BcpTaskCiphertextMapper bcpTaskCiphertextMapper;
 
 	@Resource
-	WebSocketServer webSocketServer;
+	private BcpTaskResultMapper bcpTaskResultMapper;
 
 	@Resource
-	ServerProperties sProperties;
+	private WebSocketServer webSocketServer;
+
+	@Resource
+	private ServerProperties sProperties;
 
 	/**
 	 * 开启任务，需要检测所有参与者都已连接webSocket才可以
@@ -114,7 +117,8 @@ public class BcpTaskServiceImpl {
 
 		// 批量更新本次任务状态
 		task.setStartTime(new Date());
-		task.setStartUser(UserServiceImpl.getCurrentLoginUserId());
+		// TODO 是否需要验证用户是否登录
+		task.setStartUser("userService.getCurrentLoginUser().getUserId()");
 		task.setTaskState(BigDecimal.ONE);
 		if (BCP4C.isValidPP(pp)) {
 			task.setTaskN(pp.getN().toString());
@@ -136,10 +140,11 @@ public class BcpTaskServiceImpl {
 	 */
 	public void submitBcpTask(BcpUserModel userModel) {
 		// 需要获取的信息
-		String userId = userModel.getUserId();
-		if (userId == null) {
-			userId = UserServiceImpl.getCurrentLoginUserId();
-			userModel.setUserId(userId);
+		String username = userModel.getUserName();
+		if (username == null) {
+			// TODO 是否需要检测用户是否登录
+			username = "userService.getCurrentLoginUser().getUserId()";
+			userModel.setUserName(username);
 		}
 		Long taskId = userModel.getTaskId();
 		BigInteger h = userModel.getH();
@@ -161,7 +166,7 @@ public class BcpTaskServiceImpl {
 		// 更新h到用户列表
 		BcpTaskUser updTaskUser = new BcpTaskUser();
 		updTaskUser.setTaskId(taskId);
-		updTaskUser.setTaskUserId(userId);
+		updTaskUser.setTaskUserName(username);
 		updTaskUser.setH(h.toString());
 		bcpTaskUserMapper.updateByPrimaryKeySelective(updTaskUser);
 
@@ -169,8 +174,8 @@ public class BcpTaskServiceImpl {
 		BcpTaskUser selTaskUser = new BcpTaskUser();
 		selTaskUser.setTaskId(taskId);
 		List<BcpTaskUser> bcpTaskUserList = bcpTaskUserMapper.select(selTaskUser);// 当前任务所有参与者
-		// 当前任务所有参与者id
-		List<String> bcpTaskUserIdList = bcpTaskUserList.stream().map(BcpTaskUser::getTaskUserId)
+		// 当前任务所有参与者username
+		List<String> bcpTaskUserIdList = bcpTaskUserList.stream().map(BcpTaskUser::getTaskUserName)
 				.collect(Collectors.toList());
 
 		// 查询当前任务所有参与者当前轮的密文提交情况，顺序一定要对
@@ -184,18 +189,18 @@ public class BcpTaskServiceImpl {
 		// userId->user当前轮密文，用userId聚合，查看用户是否齐全
 		HashMap<String, List<BcpTaskCiphertext>> bcpTaskCiphertextMap = new HashMap<>();
 		for (BcpTaskCiphertext bcpTaskCiphertext : bcpTaskCiphertextList) {
-			String taskUserId = bcpTaskCiphertext.getTaskUserId();
-			List<BcpTaskCiphertext> curCiphertextList = bcpTaskCiphertextMap.get(taskUserId);
+			String taskUserName = bcpTaskCiphertext.getTaskUserName();
+			List<BcpTaskCiphertext> curCiphertextList = bcpTaskCiphertextMap.get(taskUserName);
 			if (curCiphertextList == null) {
 				curCiphertextList = new ArrayList<>();
-				bcpTaskCiphertextMap.put(taskUserId, curCiphertextList);
+				bcpTaskCiphertextMap.put(taskUserName, curCiphertextList);
 			}
 			curCiphertextList.add(bcpTaskCiphertext);
 		}
 		// 已提交的用户
-		Set<String> submittedUserIdSet = bcpTaskCiphertextMap.keySet();
+		Set<String> submittedUserNameSet = bcpTaskCiphertextMap.keySet();
 
-		if (!SetUtils.isEqualSet(submittedUserIdSet, new HashSet<>(bcpTaskUserIdList))) {
+		if (!SetUtils.isEqualSet(submittedUserNameSet, new HashSet<>(bcpTaskUserIdList))) {
 			// 若两个集合不同，则还存在未提交用户，不开始这一轮计算
 			return;
 		}
@@ -204,20 +209,20 @@ public class BcpTaskServiceImpl {
 		ArrayList<BcpUserModel> userModelList = new ArrayList<BcpUserModel>();
 		for (BcpTaskUser bcpTaskUser : bcpTaskUserList) {
 			BcpUserModel bcpUserModel = new BcpUserModel();
-			String taskUserId = bcpTaskUser.getTaskUserId();
-			List<BcpTaskCiphertext> curBcpTaskCiphertextList = bcpTaskCiphertextMap.get(taskUserId);
+			String taskUserName = bcpTaskUser.getTaskUserName();
+			List<BcpTaskCiphertext> curBcpTaskCiphertextList = bcpTaskCiphertextMap.get(taskUserName);
 			List<? extends BcpCiphertext> convertCiphertext = convertCiphertext(curBcpTaskCiphertextList);
 
 			// 设置基本信息
 			bcpUserModel.setH(new BigInteger(bcpTaskUser.getH()));
-			bcpUserModel.setUserId(taskUserId);
+			bcpUserModel.setUserName(taskUserName);
 			bcpUserModel.setTaskId(taskId);
 			bcpUserModel.setRound(currentRound.intValue());
 			bcpUserModel.setCiphertextList(convertCiphertext);
 			userModelList.add(bcpUserModel);
 		}
 		// 开始计算
-		singleRound(bcpTask, userModelList, userId);
+		singleRound(bcpTask, userModelList, username);
 	}
 
 	/**
@@ -250,10 +255,10 @@ public class BcpTaskServiceImpl {
 	 * 
 	 * @param bcpTask
 	 * @param userModelList
-	 * @param userId
+	 * @param username
 	 *            当前登录用户id
 	 */
-	public void singleRound(BcpTask bcpTask, List<BcpUserModel> userModelList, String userId) {
+	public void singleRound(BcpTask bcpTask, List<BcpUserModel> userModelList, String username) {
 		// 1计算出PK
 		BigInteger N = new BigInteger(bcpTask.getTaskN());
 		List<BigInteger> pkLst = userModelList.stream().map(BcpUserModel::getH).collect(Collectors.toList());
@@ -305,7 +310,7 @@ public class BcpTaskServiceImpl {
 		BigDecimal nextRound = BigDecimal.ONE.add(bcpTask.getCurrentRound());
 		if (nextRound.compareTo(computeRounds) > 0) {
 			// 加一后若大于了最大轮数，则结束任务
-			bcpTask.setFinishUser(userId);
+			bcpTask.setFinishUser(username);
 			finishBcpTask(bcpTask);
 		}
 		BcpTask nextRoundTask = new BcpTask();
@@ -315,7 +320,7 @@ public class BcpTaskServiceImpl {
 
 		// 7 将结果发送给各个客户端
 		transDecResult.forEach((userModel) -> {
-			webSocketServer.sendMessage(userModel.getUserId(), userModel);
+			webSocketServer.sendMessage(userModel.getUserName(), userModel);
 		});
 	}
 
@@ -477,10 +482,11 @@ public class BcpTaskServiceImpl {
 		List<? extends BcpCiphertext> ciphertextList = userModel.getCiphertextList();
 		Long taskId = userModel.getTaskId();
 		BigInteger h = userModel.getH();
-		String userId = userModel.getUserId();
-		if (StringUtils.isBlank(userId)) {
+		String username = userModel.getUserName();
+		if (username != null) {
 			// 非空判断
-			userId = UserServiceImpl.getCurrentLoginUserId();
+			// TODO 是否需要判断用户是否登录
+			username = "userService.getCurrentLoginUser().getUserId()";
 		}
 
 		// 获取当前任务信息
@@ -492,7 +498,7 @@ public class BcpTaskServiceImpl {
 		// 1.先删掉该用户之前提交数据
 		BcpTaskCiphertext delCiphertextModel = new BcpTaskCiphertext();
 		delCiphertextModel.setTaskId(taskId);
-		delCiphertextModel.setTaskUserId(userId);
+		delCiphertextModel.setTaskUserName(username);
 		delCiphertextModel.setTaskRound(currentRound);
 		bcpTaskCiphertextMapper.delete(delCiphertextModel);
 
@@ -504,7 +510,7 @@ public class BcpTaskServiceImpl {
 				// 设置本次密文内容
 				BcpTaskCiphertext bcpTaskCiphertext = new BcpTaskCiphertext();
 				bcpTaskCiphertext.setTaskId(taskId);
-				bcpTaskCiphertext.setTaskUserId(userId);
+				bcpTaskCiphertext.setTaskUserName(username);
 				bcpTaskCiphertext.setTaskRound(currentRound);
 				bcpTaskCiphertext.setCiphertextOrder(new BigDecimal(i + 1));
 				// 密文信息
@@ -528,11 +534,12 @@ public class BcpTaskServiceImpl {
 		List<? extends BcpCiphertext> resultList = userModel.getCiphertextList();
 		Long taskId = userModel.getTaskId();
 		BigInteger h = userModel.getH();
-		String userId = userModel.getUserId();
+		String username = userModel.getUserName();
 		Integer userCount = userModel.getUserCount();
-		if (StringUtils.isBlank(userId)) {
+		if (username != null) {
 			// 非空判断
-			userId = UserServiceImpl.getCurrentLoginUserId();
+			// TODO 是否需要判断用户是否登录
+			username = "";
 		}
 		if (bcpTask == null) {
 			bcpTask = bcpTaskMapper.selectByPrimaryKey(taskId.toString());
@@ -545,7 +552,7 @@ public class BcpTaskServiceImpl {
 		// 1.先删掉该用户本轮之前已有的数据
 		BcpTaskResult delTaskResult = new BcpTaskResult();
 		delTaskResult.setTaskId(taskId);
-		delTaskResult.setTaskUserId(userId);
+		delTaskResult.setTaskUserName(username);
 		delTaskResult.setTaskRound(currentRound);
 		bcpTaskResultMapper.delete(delTaskResult);
 
@@ -557,7 +564,7 @@ public class BcpTaskServiceImpl {
 				// 设置本次密文内容
 				BcpTaskResult insTaskResult = new BcpTaskResult();
 				insTaskResult.setTaskId(taskId);
-				insTaskResult.setTaskUserId(userId);
+				insTaskResult.setTaskUserName(username);
 				insTaskResult.setTaskRound(currentRound);
 				insTaskResult.setResultOrder(new BigDecimal(i + 1));
 				// 结果信息
@@ -593,13 +600,14 @@ public class BcpTaskServiceImpl {
 	 */
 	public void finishBcpTask(BcpTask task) {
 		Long taskId = task.getTaskId();
-		String finishUserId = task.getFinishUser();
+		String finishUserName = task.getFinishUser();
 
 		BcpTask finishTask = new BcpTask();
 		finishTask.setTaskId(taskId);
 		finishTask.setTaskState(new BigDecimal(2));
 		finishTask.setFinishTime(new Date());
-		finishTask.setFinishUser(finishUserId != null ? finishUserId : UserServiceImpl.getCurrentLoginUserId());
+		// TODO 是否需要获取当前用户
+		finishTask.setFinishUser(finishUserName != null ? finishUserName : "userService.getCurrentLoginUser().getUserId()");
 		bcpTaskMapper.updateByPrimaryKeySelective(finishTask);
 	}
 
@@ -613,9 +621,10 @@ public class BcpTaskServiceImpl {
 	// @Transactional(noRollbackFor = ResourceAccessException.class)
 	public Object createBcpTask(BcpTask bcpTask) {
 		// 1.设置基础信息，id数据库自动生成创建时不传
-		String currentLoginUserId = UserServiceImpl.getCurrentLoginUserId();
+		// TODO 修改为获取当前登录用户 username
+		String currentLoginUserName = "";
 		bcpTask.setCurrentRound(BigDecimal.ONE);// 默认第1轮为开始
-		bcpTask.setCreateUser(currentLoginUserId);
+		bcpTask.setCreateUser(currentLoginUserName);
 		bcpTask.setCreateTime(new Date());
 		bcpTask.setTaskState(BigDecimal.ZERO);
 		bcpTask.setTaskId(null);// 主键要自增，前台传的置为空
@@ -638,7 +647,7 @@ public class BcpTaskServiceImpl {
 		Long taskId = bcpTask.getTaskId();// 获取自增后取回的主键id
 
 		// 3.设置被邀请人信息
-		insBcpTaskUser(taskId, currentLoginUserId, bcpTask.getTaskUserList());
+		insBcpTaskUser(taskId, currentLoginUserName, bcpTask.getTaskUserList());
 
 		RetModel retModel = new RetModel();
 		retModel.setRetCode(0);
@@ -674,8 +683,9 @@ public class BcpTaskServiceImpl {
 		}
 
 		// 1.若未开始则可以修改
-		String currentLoginUserId = UserServiceImpl.getCurrentLoginUserId();
-		bcpTask.setUpdateUser(currentLoginUserId);
+		// TODO 修改为当前登录用户的用户名
+		String currentLoginUserName = "";
+		bcpTask.setUpdateUser(currentLoginUserName);
 		bcpTask.setUpdateTime(new Date());
 		bcpTask.setCurrentRound(BigDecimal.ONE);// 默认第1轮为开始
 
@@ -697,7 +707,7 @@ public class BcpTaskServiceImpl {
 		bcpTaskMapper.updateByPrimaryKeySelective(bcpTask);
 
 		// 3.设置被邀请人信息
-		insBcpTaskUser(taskId, currentLoginUserId, bcpTask.getTaskUserList());
+		insBcpTaskUser(taskId, currentLoginUserName, bcpTask.getTaskUserList());
 
 		retModel.setRetCode(0);
 		retModel.setRetMess("update success");
@@ -771,24 +781,24 @@ public class BcpTaskServiceImpl {
 
 	/**
 	 * 查询指定用户参与的任务 不传则查询全部taskId
-	 * 
-	 * @param userId
+	 *
+	 * @param username
 	 *            对应的用户参与的任务
 	 * @param unfinished
 	 *            在查询指定用户的前提下，是否只查询未完成的任务
 	 * @return
 	 */
-	public List<BcpTask> getTaskList(String userId, boolean unfinished) {
+	public List<BcpTask> getTaskList(String username, boolean unfinished) {
 		// 需要返回的任务列表
 		List<BcpTask> taskList = new ArrayList<>();
 
 		// 查询全部参与者并映射到每个任务
 		List<BcpTaskUser> taskUserList = null;
 
-		if (userId != null) {
+		if (username != null) {
 			// 若传userid，则只查询该用户参与的任务
 			BcpTaskUser selTaskUser = new BcpTaskUser();
-			selTaskUser.setTaskUserId(userId);
+			selTaskUser.setTaskUserName(username);
 			List<BcpTaskUser> involvedTaskUserList = bcpTaskUserMapper.select(selTaskUser);
 			if (CollectionUtils.isEmpty(involvedTaskUserList)) {
 				// 若没有有效任务id
@@ -851,7 +861,7 @@ public class BcpTaskServiceImpl {
 
 	/**
 	 * 提出创建bcp任务时新增邀请人的方法
-	 * 
+	 *
 	 * @param taskId
 	 * @param currentLoginUserId
 	 * @param taskUserList
@@ -859,7 +869,7 @@ public class BcpTaskServiceImpl {
 	public void insBcpTaskUser(Long taskId, String currentLoginUserId, List<BcpTaskUser> taskUserList) {
 		if (CollectionUtils.isNotEmpty(taskUserList)) {
 			// 获取用户id集合，若不包含当前登录用户则加上
-			Set<String> taskUserIdSet = taskUserList.stream().map(BcpTaskUser::getTaskUserId)
+			Set<String> taskUserIdSet = taskUserList.stream().map(BcpTaskUser::getTaskUserName)
 					.collect(Collectors.toSet());
 			// 加上会自动去重，直接加
 			taskUserIdSet.add(currentLoginUserId);
@@ -872,8 +882,8 @@ public class BcpTaskServiceImpl {
 			// 用set先删后增
 			BcpTaskUser insTaskUser = new BcpTaskUser();
 			insTaskUser.setTaskId(taskId);
-			taskUserIdSet.forEach((taskUserId) -> {
-				insTaskUser.setTaskUserId(taskUserId);
+			taskUserIdSet.forEach((taskUserName) -> {
+				insTaskUser.setTaskUserName(taskUserName);
 				bcpTaskUserMapper.insert(insTaskUser);
 			});
 		}
@@ -882,29 +892,29 @@ public class BcpTaskServiceImpl {
 	/**
 	 * 
 	 * @param taskIdCollection
-	 * @param userId
+	 * @param username
 	 * @param round
 	 *            若为null，则查询最新轮计算结果
 	 * @return
 	 */
-	public List<BcpUserModel> getDesignatedOrLatestResult(Collection<Long> taskIdCollection, String userId,
+	public List<BcpUserModel> getDesignatedOrLatestResult(Collection<Long> taskIdCollection, String username,
 			Integer round, boolean isLatest) {
 		// 1.查询结果
-		List<BcpTaskResult> taskResultList = bcpTaskResultMapper.getDesignatedOrLatestResult(taskIdCollection, userId,
+		List<BcpTaskResult> taskResultList = bcpTaskResultMapper.getDesignatedOrLatestResult(taskIdCollection, username,
 				round, isLatest);
 
 		// 2.转换结果为BcpUserModel类型
 		// userId-> (taskId->result)
 		Map<String, Map<Long, BcpUserModelExt>> resultMap = new HashMap<>();
 		for (BcpTaskResult result : taskResultList) {
-			String bcpTaskUserId = result.getTaskUserId();
+			String bcpTaskUserName = result.getTaskUserName();
 			Long bcpTaskId = result.getTaskId();
 			Integer resultOrder = result.getResultOrder().intValue();// order是主键应该不会空
 
-			Map<Long, BcpUserModelExt> bcpUserTaskMap = resultMap.get(bcpTaskUserId);
+			Map<Long, BcpUserModelExt> bcpUserTaskMap = resultMap.get(bcpTaskUserName);
 			if (bcpUserTaskMap == null) {
 				bcpUserTaskMap = new HashMap<>();
-				resultMap.put(bcpTaskUserId, bcpUserTaskMap);
+				resultMap.put(bcpTaskUserName, bcpUserTaskMap);
 			}
 
 			BcpUserModelExt bcpUserModelExt = bcpUserTaskMap.get(bcpTaskId);
@@ -912,7 +922,7 @@ public class BcpTaskServiceImpl {
 				// 设置初始化信息，不初始化ciphertextList，设置完order2CiphertextMap后统一设置
 				bcpUserModelExt = new BcpUserModelExt();
 				bcpUserModelExt.setTaskId(bcpTaskId);
-				bcpUserModelExt.setUserId(bcpTaskUserId);
+				bcpUserModelExt.setUserName(bcpTaskUserName);
 				bcpUserModelExt.setH(result.getResultH() != null ? new BigInteger(result.getResultH()) : null);
 				bcpUserModelExt
 						.setUserCount(result.getTaskUserCount() != null ? result.getTaskUserCount().intValue() : null);

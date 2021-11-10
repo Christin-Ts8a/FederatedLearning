@@ -16,8 +16,8 @@ public class BcpTaskResult {
      * 用户id,若为默认值则是使用公共公钥PK加密的计算结果
      */
     @Id
-    @Column(name = "task_user_id")
-    private String taskUserId;
+    @Column(name = "task_user_name")
+    private String taskUserName;
 
     /**
      * 任务轮数
@@ -78,19 +78,19 @@ public class BcpTaskResult {
     /**
      * 获取用户id,若为默认值则是使用公共公钥PK加密的计算结果
      *
-     * @return task_user_id - 用户id,若为默认值则是使用公共公钥PK加密的计算结果
+     * @return task_user_name - 用户username,若为默认值则是使用公共公钥PK加密的计算结果
      */
-    public String getTaskUserId() {
-        return taskUserId;
+    public String getTaskUserName() {
+        return taskUserName;
     }
 
     /**
-     * 设置用户id,若为默认值则是使用公共公钥PK加密的计算结果
+     * 设置用户username,若为默认值则是使用公共公钥PK加密的计算结果
      *
-     * @param taskUserId 用户id,若为默认值则是使用公共公钥PK加密的计算结果
+     * @param taskUserName 用户username,若为默认值则是使用公共公钥PK加密的计算结果
      */
-    public void setTaskUserId(String taskUserId) {
-        this.taskUserId = taskUserId == null ? null : taskUserId.trim();
+    public void setTaskUserName(String taskUserName) {
+        this.taskUserName = taskUserName;
     }
 
     /**

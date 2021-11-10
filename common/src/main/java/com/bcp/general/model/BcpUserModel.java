@@ -12,7 +12,7 @@ public class BcpUserModel {
 	/**
 	 * 标识用户id
 	 */
-	private String userId;
+	private String username;
 	
 	/**
 	 * 标识这是属于哪个任务的
@@ -45,12 +45,12 @@ public class BcpUserModel {
 	 */
 	private Integer userCount;
 
-	public String getUserId() {
-		return userId;
+	public String getUserName() {
+		return username;
 	}
 
-	public void setUserId(String userId) {
-		this.userId = userId;
+	public void setUserName(String username) {
+		this.username = username;
 	}
 
 	public BigInteger getH() {

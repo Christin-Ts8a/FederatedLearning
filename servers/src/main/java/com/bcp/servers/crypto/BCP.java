@@ -5,17 +5,13 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
-
 import javax.validation.Valid;
-
-import org.apache.commons.collections.CollectionUtils;
-
 import com.bcp.general.crypto.BcpBlindCiphertext;
 import com.bcp.general.crypto.BcpCiphertext;
 import com.bcp.general.crypto.BcpKeyPair;
 import com.bcp.general.crypto.PP;
 import com.bcp.general.constant.BCPConstant;
-
+import org.springframework.util.CollectionUtils;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;

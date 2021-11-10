@@ -89,7 +89,7 @@ public class BcpServiceImpl {
 
 			// 设置返回结构
 			ret.setH(PK);
-			ret.setUserId(model.getUserId());
+			ret.setUserName(model.getUserName());
 			ret.setCiphertextList(ciphertextPKLst);
 			retLst.add(ret);
 		}
@@ -170,7 +170,6 @@ public class BcpServiceImpl {
 	 * S应该只需要keyProd和transDec两部分，不需要中间的mult
 	 * 
 	 * @param transDecArg
-	 * @param param
 	 * @return
 	 */
 	public Object transDec(BcpCommunicateModel transDecArg) {
@@ -208,7 +207,7 @@ public class BcpServiceImpl {
 
 			// 设置返回结构
 			ret.setH(h);
-			ret.setUserId(model.getUserId());
+			ret.setUserName(model.getUserName());
 			ret.setCiphertextList(resultOnHList);
 			return ret;
 		}).collect(Collectors.toList());

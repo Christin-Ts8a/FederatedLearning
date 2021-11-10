@@ -16,8 +16,8 @@ public class BcpTaskCiphertext {
      * 用户id
      */
     @Id
-    @Column(name = "task_user_id")
-    private String taskUserId;
+    @Column(name = "task_user_name")
+    private String taskUserName;
 
     /**
      * 当前轮数
@@ -74,17 +74,17 @@ public class BcpTaskCiphertext {
      *
      * @return task_user_id - 用户id
      */
-    public String getTaskUserId() {
-        return taskUserId;
+    public String getTaskUserName() {
+        return taskUserName;
     }
 
     /**
      * 设置用户id
      *
-     * @param taskUserId 用户id
+     * @param taskUserName 用户 username
      */
-    public void setTaskUserId(String taskUserId) {
-        this.taskUserId = taskUserId == null ? null : taskUserId.trim();
+    public void setTaskUserName(String taskUserName) {
+        this.taskUserName = taskUserName;
     }
 
     /**

@@ -6,11 +6,10 @@ import com.bcp.serverc.model.BcpTask;
 import com.bcp.serverc.service.impl.BcpTaskServiceImpl;
 import com.bcp.serverc.service.impl.UserServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
+import org.springframework.util.CollectionUtils;
 import javax.servlet.http.HttpSession;
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
@@ -20,8 +19,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-//@ConditionalOnClass(value = WebSocketConfig.class)
-//@Transactional(readOnly = false, rollbackFor = Exception.class)
 @ServerEndpoint(value = "/webSocket/{connect_message}", configurator = WebSocketConfig.class)
 @Component
 public class WebSocketServer {
@@ -34,7 +31,7 @@ public class WebSocketServer {
     // session)的map
     // 这样用户可以同时参与计算多个任务而不冲突，但这样用户连接如果不发送taskId或发送错误taskId的情况也需要考虑
     private static volatile ConcurrentHashMap<String, Session> sessionPool = new ConcurrentHashMap<>();
-    public static volatile ConcurrentHashMap<String, HttpSession> loginUsers = new ConcurrentHashMap<>();
+    public static volatile ConcurrentHashMap<String, String> loginUsers = new ConcurrentHashMap<>();
 
     @Autowired
     private static BcpTaskServiceImpl bcpTaskSrv;
@@ -67,11 +64,11 @@ public class WebSocketServer {
     /**
      * 给指定用户发送信息
      *
-     * @param userId
+     * @param username
      * @param message
      */
-    public void sendMessage(String userId, Object message) {
-        Session session = sessionPool.get(userId);
+    public void sendMessage(String username, Object message) {
+        Session session = sessionPool.get(username);
         try {
             sendMessage(session, message);
         } catch (Exception e) {
@@ -97,18 +94,17 @@ public class WebSocketServer {
 
     // 建立连接成功调用
     @OnOpen
-    public void onOpen(Session session, EndpointConfig config, @PathParam(value = "connect_message") String connectMessage)
+    public void onOpen(Session session, @PathParam(value = "connect_message") String username)
             throws EncodeException, IOException {
-        // ws环境无法通过该方法获取登录信息
-        String userId = connectMessage;
-        if (StringUtils.isNotBlank(userId) && !loginUsers.containsKey(userId)) {
-            sessionPool.put(userId, session);
+        if (StringUtils.isNotBlank(username) && !loginUsers.containsKey(username)) {
+            sendMessage(session, "登录成功");
+            sessionPool.put(username, session);
         } else {
             sendMessage(session, "");
         }
 
         // 1. 连接时获取该用户参与的未完成任务情况
-        List<BcpTask> unfinishedTaskList = bcpTaskSrv.getTaskList(userId, true);
+        List<BcpTask> unfinishedTaskList = bcpTaskSrv.getTaskList(username, true);
         // 不管是否为空都发
         sendMessage(session, unfinishedTaskList);
 
@@ -118,36 +114,36 @@ public class WebSocketServer {
             sendMessage(session, new ArrayList<>());
         } else {
             Set<Long> taskIdSet = unfinishedTaskList.stream().map(BcpTask::getTaskId).collect(Collectors.toSet());
-            List<BcpUserModel> resultList = bcpTaskSrv.getDesignatedOrLatestResult(taskIdSet, userId, null, true);
+            List<BcpUserModel> resultList = bcpTaskSrv.getDesignatedOrLatestResult(taskIdSet, username, null, true);
             sendMessage(session, resultList);
         }
     }
 
     // 关闭连接时调用
     @OnClose
-    public void onClose(Session session, @PathParam(value = "connect_message") String connectMessage)
+    public void onClose(Session session, @PathParam(value = "connect_message") String username)
             throws IOException {
         if (session != null) {
             session.close();
-            String userId = session.getUserPrincipal().getName();
-            sessionPool.remove(userId);
-            System.out.println(userId + "断开webSocket连接！当前人数为" + sessionPool.size());
+            sessionPool.remove(username);
+            System.out.println(username + "断开webSocket连接！当前人数为" + sessionPool.size());
         }
     }
 
     // 收到客户端信息，视为json格式
     @OnMessage
     public void onMessage(Session session, String message) throws IOException {
-        String userId = session.getUserPrincipal().getName();
+        // TODO 获取当前登录用户信息
+        String username = session.getUserPrincipal().getName();
         ObjectMapper objectMapper = new ObjectMapper();
         // 获取用户发来参数
         BcpUserModel userModel = objectMapper.readValue(message, BcpUserModel.class);
-        userModel.setUserId(userId);// websocket环境下设置用户id
+        userModel.setUserName(username);// websocket环境下设置用户id
 
         // 提交数据
         bcpTaskSrv.submitBcpTask(userModel);
 
-        System.out.println(userId + "提交数据");
+        System.out.println(username + "提交数据");
     }
 
     // 错误时调用

@@ -53,21 +53,21 @@ public class BcpTask {
     private BigDecimal paramPrecision;
 
     /**
-     * 创建人id
+     * 创建人username
      */
     @Column(name = "create_user")
     @ApiModelProperty(hidden = true)
     private String createUser;
 
     /**
-     * 最后更新人id
+     * 最后更新人username
      */
     @Column(name = "update_user")
     @ApiModelProperty(hidden = true)
     private String updateUser;
 
     /**
-     * 开始任务人id
+     * 开始任务人username
      */
     @Column(name = "start_user")
     @ApiModelProperty(hidden = true)
@@ -277,7 +277,7 @@ public class BcpTask {
      * @param createUser 创建人id
      */
     public void setCreateUser(String createUser) {
-        this.createUser = createUser == null ? null : createUser.trim();
+        this.createUser = createUser;
     }
 
     /**
@@ -295,7 +295,7 @@ public class BcpTask {
      * @param updateUser 最后更新人id
      */
     public void setUpdateUser(String updateUser) {
-        this.updateUser = updateUser == null ? null : updateUser.trim();
+        this.updateUser = updateUser;
     }
 
     /**
@@ -313,7 +313,7 @@ public class BcpTask {
      * @param startUser 开始任务人id
      */
     public void setStartUser(String startUser) {
-        this.startUser = startUser == null ? null : startUser.trim();
+        this.startUser = startUser;
     }
 
     /**
@@ -331,7 +331,7 @@ public class BcpTask {
      * @param finishUser 结束任务人id
      */
     public void setFinishUser(String finishUser) {
-        this.finishUser = finishUser == null ? null : finishUser.trim();
+        this.finishUser = finishUser;
     }
 
     /**

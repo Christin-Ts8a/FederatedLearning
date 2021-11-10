@@ -3,6 +3,7 @@ package com.bcp.serverc.model;
 import javax.persistence.*;
 
 import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
 
 @Table(name = "bcp_task_user")
 public class BcpTaskUser {
@@ -18,8 +19,8 @@ public class BcpTaskUser {
      * userid
      */
     @Id
-    @Column(name = "task_user_id")
-    private String taskUserId;
+    @Column(name = "task_user_name")
+    private String taskUserName;
 
     /**
      * 本次任务该用户的公钥
@@ -50,17 +51,17 @@ public class BcpTaskUser {
      *
      * @return task_user_id - userid
      */
-    public String getTaskUserId() {
-        return taskUserId;
+    public String getTaskUserName() {
+        return taskUserName;
     }
 
     /**
      * 设置userid
      *
-     * @param taskUserId userid
+     * @param taskUserName userid
      */
-    public void setTaskUserId(String taskUserId) {
-        this.taskUserId = taskUserId == null ? null : taskUserId.trim();
+    public void setTaskUserName(String taskUserName) {
+        this.taskUserName = taskUserName;
     }
 
     /**
