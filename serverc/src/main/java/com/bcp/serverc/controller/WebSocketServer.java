@@ -10,7 +10,6 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
-import javax.servlet.http.HttpSession;
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
@@ -30,7 +29,7 @@ public class WebSocketServer {
     // 理想情况应该是<String, Map<String, Session>>的userId -> (taskId ->
     // session)的map
     // 这样用户可以同时参与计算多个任务而不冲突，但这样用户连接如果不发送taskId或发送错误taskId的情况也需要考虑
-    private static volatile ConcurrentHashMap<String, Session> sessionPool = new ConcurrentHashMap<>();
+    private static volatile ConcurrentHashMap<String, Map<Session, String>> sessionPool = new ConcurrentHashMap<>();
     public static volatile ConcurrentHashMap<String, String> loginUsers = new ConcurrentHashMap<>();
 
     @Autowired
@@ -64,16 +63,19 @@ public class WebSocketServer {
     /**
      * 给指定用户发送信息
      *
-     * @param username
+     * @param sessionId
      * @param message
      */
-    public void sendMessage(String username, Object message) {
-        Session session = sessionPool.get(username);
-        try {
-            sendMessage(session, message);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    public void sendMessage(String sessionId, Object message) {
+        sessionPool.get(sessionId).entrySet().forEach(entry -> {
+            if (entry.getKey().getId().equals(sessionId)) {
+                try {
+                    sendMessage(entry.getKey(), message);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     /**
@@ -82,14 +84,13 @@ public class WebSocketServer {
      * @param message
      */
     public void broadCast(Object message) {
-        for (Session session : sessionPool.values()) {
+        sessionPool.entrySet().forEach(entry -> {
             try {
-                sendMessage(session, message);
+                sendMessage(entry.getKey(), message);
             } catch (Exception e) {
                 e.printStackTrace();
-                continue;
             }
-        }
+        });
     }
 
     // 建立连接成功调用
@@ -98,7 +99,7 @@ public class WebSocketServer {
             throws EncodeException, IOException {
         if (StringUtils.isNotBlank(username) && !loginUsers.containsKey(username)) {
             sendMessage(session, "登录成功");
-            sessionPool.put(username, session);
+            sessionPool.put(session.getId(), Map.of(session, username));
         } else {
             sendMessage(session, "");
         }
@@ -125,7 +126,7 @@ public class WebSocketServer {
             throws IOException {
         if (session != null) {
             session.close();
-            sessionPool.remove(username);
+            sessionPool.remove(session.getId());
             System.out.println(username + "断开webSocket连接！当前人数为" + sessionPool.size());
         }
     }
@@ -133,17 +134,16 @@ public class WebSocketServer {
     // 收到客户端信息，视为json格式
     @OnMessage
     public void onMessage(Session session, String message) throws IOException {
-        // TODO 获取当前登录用户信息
-        String username = session.getUserPrincipal().getName();
-        ObjectMapper objectMapper = new ObjectMapper();
+        String username = sessionPool.get(session.getId()).get(session);
+//        ObjectMapper objectMapper = new ObjectMapper();
         // 获取用户发来参数
-        BcpUserModel userModel = objectMapper.readValue(message, BcpUserModel.class);
-        userModel.setUserName(username);// websocket环境下设置用户id
-
+//        BcpUserModel userModel = objectMapper.readValue(message, BcpUserModel.class);
+//        userModel.setUserName(username);// websocket环境下设置用户id
+//
         // 提交数据
-        bcpTaskSrv.submitBcpTask(userModel);
+//        bcpTaskSrv.submitBcpTask(userModel);
 
-        System.out.println(username + "提交数据");
+        System.out.println(username + "提交数据: " + message);
     }
 
     // 错误时调用
@@ -158,8 +158,8 @@ public class WebSocketServer {
      *
      * @return
      */
-    public static synchronized Map<String, Session> getSessionPool() {
-        Map<String, Session> unmodifiableMap = Collections.unmodifiableMap(sessionPool);
+    public static synchronized Map<String, Map<Session, String>> getSessionPool() {
+        Map<String, Map<Session, String>> unmodifiableMap = Collections.unmodifiableMap(sessionPool);
         return unmodifiableMap;
     }
 

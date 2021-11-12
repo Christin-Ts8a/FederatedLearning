@@ -33,4 +33,7 @@ public class User {
 
 	@Column(name = "org_code")
 	private Long orgCode;
+
+	@Column(name = "role_type")
+	private Integer roleType;
 }
