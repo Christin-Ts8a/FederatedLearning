@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcp.serverc.mapper.TrainModelMapper">
+  <resultMap id="BaseResultMap" type="com.bcp.serverc.model.TrainModel">
+    <!--
+      WARNING - @mbg.generated
+    -->
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="model_name" jdbcType="VARCHAR" property="modelName" />
+    <result column="org_code" jdbcType="BIGINT" property="orgCode" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="create_user" jdbcType="BIGINT" property="createUser" />
+    <result column="path" jdbcType="VARCHAR" property="path" />
+    <result column="status" jdbcType="INTEGER" property="status" />
+  </resultMap>
+
+  <select id="selectByConditions" parameterType="com.bcp.serverc.model.TrainModel" resultMap="BaseResultMap">
+    SELECT ID, MODEL_NAME, ORG_CODE, CREATE_TIME, UPDATE_TIME, CREATE_USER, `PATH`, `STATUS`
+    FROM train_model
+    <where>
+      <if test="id != null and id != ''">AND ID = #{id}</if>
+      <if test="modelName != null and modelName != ''">AND MODEL_NAME LIKE "%"#{modelName}"%"</if>
+      <if test="orgCode != null and orgCode != ''">AND ORG_CODE = #{orgCode}</if>
+    </where>
+  </select>
+</mapper>
