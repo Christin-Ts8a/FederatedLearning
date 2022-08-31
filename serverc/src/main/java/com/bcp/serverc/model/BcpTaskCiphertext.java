@@ -24,7 +24,7 @@ public class BcpTaskCiphertext {
      */
     @Id
     @Column(name = "task_round")
-    private BigDecimal taskRound;
+    private Integer taskRound;
 
     /**
      * 当前序号
@@ -50,6 +50,17 @@ public class BcpTaskCiphertext {
      */
     @Column(name = "ciphertext_h")
     private String ciphertextH;
+
+    @Column(name ="ciphertext_struct")
+    private String ciphertextStruct;
+
+    public String getCiphertextStruct() {
+        return ciphertextStruct;
+    }
+
+    public void setCiphertextStruct(String ciphertextStruct) {
+        this.ciphertextStruct = ciphertextStruct;
+    }
 
     /**
      * 获取任务id
@@ -92,7 +103,7 @@ public class BcpTaskCiphertext {
      *
      * @return task_round - 当前轮数
      */
-    public BigDecimal getTaskRound() {
+    public Integer getTaskRound() {
         return taskRound;
     }
 
@@ -101,7 +112,7 @@ public class BcpTaskCiphertext {
      *
      * @param taskRound 当前轮数
      */
-    public void setTaskRound(BigDecimal taskRound) {
+    public void setTaskRound(Integer taskRound) {
         this.taskRound = taskRound;
     }
 
@@ -168,12 +179,27 @@ public class BcpTaskCiphertext {
         return ciphertextH;
     }
 
+    @Override
+    public String toString() {
+        return "BcpTaskCiphertext{" +
+                "taskId=" + taskId +
+                ", taskUserName='" + taskUserName + '\'' +
+                ", taskRound=" + taskRound +
+                ", ciphertextOrder=" + ciphertextOrder +
+                ", ciphertextA='" + ciphertextA + '\'' +
+                ", ciphertextB='" + ciphertextB + '\'' +
+                ", ciphertextH='" + ciphertextH + '\'' +
+                ", ciphertextStruct='" + ciphertextStruct + '\'' +
+                '}';
+    }
+
     /**
      * 设置加密使用的公钥
      *
      * @param ciphertextH 加密使用的公钥
      */
     public void setCiphertextH(String ciphertextH) {
+
         this.ciphertextH = ciphertextH;
     }
 }

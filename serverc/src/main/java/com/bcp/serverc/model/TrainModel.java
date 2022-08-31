@@ -30,7 +30,10 @@ public class TrainModel {
 
     @NotNull
     @Column(name = "create_user")
-    private Long createUser;
+    private String createUser;
+
+    @Column(name = "data_name")
+    private String dataName;
 
     @NotNull
     @Column(name = "status")

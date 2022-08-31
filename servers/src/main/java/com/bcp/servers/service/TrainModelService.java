@@ -1,6 +1,6 @@
-package com.bcp.serverc.service;
+package com.bcp.servers.service;
 
-import com.bcp.serverc.model.TrainModel;
+import com.bcp.servers.model.TrainModel;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;

@@ -41,4 +41,10 @@ public class OrgController {
         List<Org> result = orgService.list(org);
         return JsonResult.ok(result);
     }
+
+    @GetMapping("/getOrgById")
+    public JsonResult getOrgById(@RequestParam("id") Long id) {
+        Org result = orgService.getOrgById(id);
+        return JsonResult.ok(result);
+    }
 }

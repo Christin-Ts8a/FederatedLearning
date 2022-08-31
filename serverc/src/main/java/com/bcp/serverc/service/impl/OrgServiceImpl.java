@@ -30,4 +30,11 @@ public class OrgServiceImpl implements OrgService {
     public List<Org> list(Org org) {
         return orgMapper.selectByConditions(org);
     }
+
+    @Override
+    public Org getOrgById(Long id) {
+        Org org = new Org();
+        org.setId(id);
+        return orgMapper.selectOne(org);
+    }
 }

@@ -81,4 +81,13 @@ public class BcpTaskUser {
     public void setH(String h) {
         this.h = h;
     }
+
+    @Override
+    public String toString() {
+        return "BcpTaskUser{" +
+                "taskId=" + taskId +
+                ", taskUserName='" + taskUserName + '\'' +
+                ", h='" + h + '\'' +
+                '}';
+    }
 }

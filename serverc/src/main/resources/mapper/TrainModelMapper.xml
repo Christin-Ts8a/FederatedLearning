@@ -1,24 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.bcp.serverc.mapper.OrgMapper">
-  <resultMap id="BaseResultMap" type="com.bcp.serverc.model.Org">
+<mapper namespace="com.bcp.serverc.mapper.TrainModelMapper">
+  <resultMap id="BaseResultMap" type="com.bcp.serverc.model.TrainModel">
     <!--
       WARNING - @mbg.generated
     -->
     <id column="id" jdbcType="BIGINT" property="id" />
-    <result column="org_name" jdbcType="VARCHAR" property="orgName" />
-    <result column="service_address" jdbcType="VARCHAR" property="serviceAddress" />
-    <result column="front_address" jdbcType="VARCHAR" property="frontAddress" />
+    <result column="model_name" jdbcType="VARCHAR" property="modelName" />
+    <result column="org_code" jdbcType="BIGINT" property="orgCode" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="create_user" jdbcType="BIGINT" property="createUser" />
+    <result column="data_name" jdbcType="VARCHAR" property="dataName" />
+    <result column="status" jdbcType="INTEGER" property="status" />
   </resultMap>
 
-  <select id="selectByConditions" parameterType="com.bcp.serverc.model.Org" resultMap="BaseResultMap">
-    SELECT ID, ORG_NAME, SERVER_ADDRESS, FRONT_ADDRESS
-    FROM org
+  <select id="selectByConditions" parameterType="java.util.Map" resultType="java.util.Map">
+    SELECT tm.ID id, tm.MODEL_NAME modelName, tm.ORG_CODE orgCode, u.NICKNAME createUser, o.ORG_NAME orgName, tm.CREATE_TIME createTime, tm.UPDATE_TIME ipdateTime, tm.CREATE_USER createUserId, tm.`DATA_NAME` dataName, tm.`STATUS` status
+    FROM train_model tm
+    LEFT JOIN org o ON tm.ORG_CODE = o.id
+    LEFT JOIN `user` u ON tm.CREATE_USER = u.username
     <where>
-      <if test="id != null and id != ''">AND ID = #{id}</if>
-      <if test="orgName != null and orgName != ''">AND ORG_NAME LIKE "%"#{orgName}"%"</if>
-      <if test="serverAddress != null and serverAddress != ''">AND SERVER_ADDRESS = #{serverAddress}</if>
-      <if test="frontAddress != null and frontAddress != ''">AND FRONT_ADDRESS = #{frontAddress}</if>
+      <if test="id != null and id != ''">AND tm.ID = #{id}</if>
+      <if test="modelName != null and modelName != ''">AND tm.MODEL_NAME LIKE "%"#{modelName}"%"</if>
+      <if test="orgCode != null and orgCode != ''">AND FIND_IN_SET(CAST(tm.ORG_CODE AS CHAR(255)), #{orgCode})</if>
+      <if test="username != null and username != ''">AND (tm.ORG_CODE = (SELECT u.ORG_CODE FROM user u WHERE u.USERNAME = #{username}) OR tm.`STATUS` = 1)</if>
     </where>
   </select>
 </mapper>

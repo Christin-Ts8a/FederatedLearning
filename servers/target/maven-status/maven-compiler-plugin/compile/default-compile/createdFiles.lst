@@ -3,9 +3,14 @@ com/bcp/servers/crypto/MK.class
 com/bcp/servers/mapper/BcpParamMapper.class
 com/bcp/servers/model/BcpParam.class
 com/bcp/servers/crypto/BCP.class
+com/bcp/servers/service/impl/TrainModelServiceImpl.class
 com/bcp/servers/except/GlobalExceptionHandler.class
+com/bcp/servers/model/TrainModel.class
 com/bcp/servers/crypto/BCP$GenPQ.class
 com/bcp/servers/config/SwaggerConfig.class
+com/bcp/servers/controller/TrainModelController.class
 com/bcp/servers/controller/BcpController.class
 com/bcp/servers/service/impl/BcpServiceImpl.class
+com/bcp/servers/service/TrainModelService.class
+com/bcp/servers/mapper/TrainModelMapper.class
 com/bcp/servers/StartServerS.class

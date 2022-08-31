@@ -89,7 +89,7 @@ public class BcpServiceImpl {
 
 			// 设置返回结构
 			ret.setH(PK);
-			ret.setUserName(model.getUserName());
+			ret.setOrgCode(model.getOrgCode());
 			ret.setCiphertextList(ciphertextPKLst);
 			retLst.add(ret);
 		}
@@ -207,7 +207,7 @@ public class BcpServiceImpl {
 
 			// 设置返回结构
 			ret.setH(h);
-			ret.setUserName(model.getUserName());
+			ret.setOrgCode(model.getOrgCode());
 			ret.setCiphertextList(resultOnHList);
 			return ret;
 		}).collect(Collectors.toList());

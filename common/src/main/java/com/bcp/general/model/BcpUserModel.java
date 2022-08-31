@@ -12,7 +12,7 @@ public class BcpUserModel {
 	/**
 	 * 标识用户id
 	 */
-	private String username;
+	private String orgCode;
 	
 	/**
 	 * 标识这是属于哪个任务的
@@ -45,12 +45,22 @@ public class BcpUserModel {
 	 */
 	private Integer userCount;
 
-	public String getUserName() {
-		return username;
+	private String struct;
+
+	public String getStruct() {
+		return struct;
 	}
 
-	public void setUserName(String username) {
-		this.username = username;
+	public void setStruct(String struct) {
+		this.struct = struct;
+	}
+
+	public String getOrgCode() {
+		return orgCode;
+	}
+
+	public void setOrgCode(String username) {
+		this.orgCode = username;
 	}
 
 	public BigInteger getH() {
@@ -100,5 +110,18 @@ public class BcpUserModel {
 	public void setStop(boolean stop) {
 		this.stop = stop;
 	}
-	
+
+	@Override
+	public String toString() {
+		return "BcpUserModel{" +
+				"orgCode='" + orgCode + '\'' +
+				", taskId=" + taskId +
+				", round=" + round +
+				", stop=" + stop +
+				", h=" + h +
+				", ciphertextList=" + ciphertextList +
+				", userCount=" + userCount +
+				", struct='" + struct + '\'' +
+				'}';
+	}
 }

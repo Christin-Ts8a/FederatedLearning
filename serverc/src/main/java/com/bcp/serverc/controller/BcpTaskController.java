@@ -1,8 +1,12 @@
 package com.bcp.serverc.controller;
 
+import java.net.http.HttpRequest;
 import java.util.Arrays;
 
 import com.bcp.general.util.JsonResult;
+import com.bcp.serverc.model.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +19,8 @@ import com.bcp.serverc.model.BcpTask;
 import com.bcp.general.model.BcpUserModel;
 import com.bcp.serverc.service.impl.BcpTaskServiceImpl;
 
+import javax.servlet.http.HttpServletRequest;
+
 /**
  * 修改计算任务参数，开始任务等接口
  *
@@ -22,6 +28,8 @@ import com.bcp.serverc.service.impl.BcpTaskServiceImpl;
 @RestController
 @RequestMapping("/bcpTask")
 public class BcpTaskController {
+
+	public static final Logger logger = LoggerFactory.getLogger(BcpTaskController.class);
 
 	@Autowired
 	BcpTaskServiceImpl bcpTaskSrv;
@@ -45,27 +53,32 @@ public class BcpTaskController {
 	}
 
 	@RequestMapping(value = "/create", method = RequestMethod.POST)
-	public JsonResult createTask(@RequestBody BcpTask bcpTask) {
-		Object ret = bcpTaskSrv.createBcpTask(bcpTask);
+	public JsonResult createTask(HttpServletRequest request, @RequestBody BcpTask bcpTask) {
+		logger.info("create");
+		Object ret = bcpTaskSrv.createBcpTask(request, bcpTask);
 		return JsonResult.ok(ret);
 	}
 
 	@RequestMapping(value = "/update", method = RequestMethod.PATCH)
-	public Object updateTask(@RequestBody BcpTask bcpTask, @RequestParam boolean setPP) {
-		Object ret = bcpTaskSrv.updateBcpTask(bcpTask, setPP);
+	public Object updateTask(HttpServletRequest request, @RequestBody BcpTask bcpTask, @RequestParam boolean setPP) {
+		Object ret = bcpTaskSrv.updateBcpTask(request, bcpTask, setPP);
 
 		return ret;
 	}
 
 	@RequestMapping(value = "/start", method = RequestMethod.POST)
-	public Object startTask(@RequestBody BcpTask taskArg) {
-		Object ret = bcpTaskSrv.startBcpTask(taskArg);
-
+	public Object startTask(HttpServletRequest request, @RequestBody BcpTask taskArg) {
+		logger.info("start");
+		Object ret = bcpTaskSrv.startBcpTask(request, taskArg);
 		return ret;
 	}
 
 	@RequestMapping(value = "/submitData", method = RequestMethod.POST)
-	public Object submitBcpTask(@RequestBody BcpUserModel userModel) {
+	public Object submitBcpTask(HttpServletRequest request, @RequestBody BcpUserModel userModel) {
+		User loginUser = (User) request.getSession().getAttribute("SYSTEM_USER_SESSION");
+		logger.info("submitData loginUser: " + loginUser);
+		userModel.setOrgCode(loginUser.getOrgCode().toString());
+		System.out.println("loginUser.getOrgCode().toString(): "+loginUser.getOrgCode().toString());
 		bcpTaskSrv.submitBcpTask(userModel);
 		return "submit success";
 	}

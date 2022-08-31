@@ -24,7 +24,7 @@ public class BcpTaskResult {
      */
     @Id
     @Column(name = "task_round")
-    private BigDecimal taskRound;
+    private Integer taskRound;
 
     /**
      * 结果序号
@@ -98,7 +98,7 @@ public class BcpTaskResult {
      *
      * @return task_round - 任务轮数
      */
-    public BigDecimal getTaskRound() {
+    public Integer getTaskRound() {
         return taskRound;
     }
 
@@ -107,7 +107,7 @@ public class BcpTaskResult {
      *
      * @param taskRound 任务轮数
      */
-    public void setTaskRound(BigDecimal taskRound) {
+    public void setTaskRound(Integer taskRound) {
         this.taskRound = taskRound;
     }
 

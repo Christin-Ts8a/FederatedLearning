@@ -1,6 +1,7 @@
-package com.bcp.serverc.model;
+package com.bcp.servers.model;
 
 import lombok.Data;
+
 import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Table;

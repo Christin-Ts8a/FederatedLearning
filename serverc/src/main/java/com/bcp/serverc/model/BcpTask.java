@@ -37,14 +37,14 @@ public class BcpTask {
      * 最大交互轮数,若为null则无限轮,无限的情况下,有一个客户端发出收敛信号,即代表全体收敛
      */
     @Column(name = "compute_rounds")
-    private BigDecimal computeRounds;
+    private Integer computeRounds;
 
     /**
      * 该任务当前交互轮数
      */
     @Column(name = "current_round")
     @ApiModelProperty(hidden = true)
-    private BigDecimal currentRound;
+    private Integer currentRound;
 
     /**
      * 客户端浮点参数支持的最大精度,计算时客户端将作为参数的浮点张量中的所有元素统一乘以10的最大精度次方变为整数后才能加密
@@ -147,12 +147,23 @@ public class BcpTask {
     @Column(name = "task_g")
     @ApiModelProperty(hidden = true)
     private String taskG;
-    
+
+    public String getModelName() {
+        return modelName;
+    }
+
+    public void setModelName(String modelName) {
+        this.modelName = modelName;
+    }
+
     /**
      * 参与者列表
      */
     @Transient
     private List<BcpTaskUser> taskUserList;
+
+    @Column(name = "model_name")
+    private String modelName;
 
     /**
      * 获取任务id
@@ -213,7 +224,7 @@ public class BcpTask {
      *
      * @return compute_rounds - 最大交互轮数,若为null则无限轮,无限的情况下,有一个客户端发出收敛信号,即代表全体收敛
      */
-    public BigDecimal getComputeRounds() {
+    public Integer getComputeRounds() {
         return computeRounds;
     }
 
@@ -222,7 +233,7 @@ public class BcpTask {
      *
      * @param computeRounds 最大交互轮数,若为null则无限轮,无限的情况下,有一个客户端发出收敛信号,即代表全体收敛
      */
-    public void setComputeRounds(BigDecimal computeRounds) {
+    public void setComputeRounds(Integer computeRounds) {
         this.computeRounds = computeRounds;
     }
 
@@ -231,7 +242,7 @@ public class BcpTask {
      *
      * @return current_round - 该任务当前交互轮数
      */
-    public BigDecimal getCurrentRound() {
+    public Integer getCurrentRound() {
         return currentRound;
     }
 
@@ -240,7 +251,7 @@ public class BcpTask {
      *
      * @param currentRound 该任务当前交互轮数
      */
-    public void setCurrentRound(BigDecimal currentRound) {
+    public void setCurrentRound(Integer currentRound) {
         this.currentRound = currentRound;
     }
 
@@ -521,5 +532,31 @@ public class BcpTask {
 	public void setTaskUserList(List<BcpTaskUser> taskUserList) {
 		this.taskUserList = taskUserList;
 	}
-    
+
+    @Override
+    public String toString() {
+        return "BcpTask{" +
+                "taskId=" + taskId +
+                ", taskName='" + taskName + '\'' +
+                ", taskState=" + taskState +
+                ", computeRounds=" + computeRounds +
+                ", currentRound=" + currentRound +
+                ", paramPrecision=" + paramPrecision +
+                ", createUser='" + createUser + '\'' +
+                ", updateUser='" + updateUser + '\'' +
+                ", startUser='" + startUser + '\'' +
+                ", finishUser='" + finishUser + '\'' +
+                ", createTime=" + createTime +
+                ", updateTime=" + updateTime +
+                ", startTime=" + startTime +
+                ", finishTime=" + finishTime +
+                ", finishReason='" + finishReason + '\'' +
+                ", taskKappa=" + taskKappa +
+                ", taskCertainty=" + taskCertainty +
+                ", taskN='" + taskN + '\'' +
+                ", taskK='" + taskK + '\'' +
+                ", taskG='" + taskG + '\'' +
+                ", taskUserList=" + taskUserList +
+                '}';
+    }
 }

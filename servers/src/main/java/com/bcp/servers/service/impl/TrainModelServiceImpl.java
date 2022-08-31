@@ -1,13 +1,11 @@
-package com.bcp.serverc.service.impl;
+package com.bcp.servers.service.impl;
 
-import com.bcp.serverc.mapper.TrainModelMapper;
-import com.bcp.serverc.model.TrainModel;
-import com.bcp.serverc.service.TrainModelService;
+import com.bcp.servers.mapper.TrainModelMapper;
+import com.bcp.servers.model.TrainModel;
+import com.bcp.servers.service.TrainModelService;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ResourceUtils;
 import org.springframework.web.multipart.MultipartFile;
-import tk.mybatis.mapper.entity.Example;
-
 import javax.annotation.Resource;
 import java.io.File;
 import java.io.FileOutputStream;

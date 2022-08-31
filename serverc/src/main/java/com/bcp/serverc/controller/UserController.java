@@ -6,18 +6,23 @@ import com.bcp.general.crypto.PP;
 import com.bcp.general.util.JsonResult;
 import com.bcp.serverc.crypto.BCP;
 import com.bcp.serverc.crypto.MD5;
+import com.bcp.serverc.model.Org;
 import com.bcp.serverc.model.User;
+import com.bcp.serverc.service.OrgService;
 import com.bcp.serverc.service.UserService;
-import org.apache.tomcat.util.bcel.classfile.Constant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import javax.annotation.Resource;
 import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -31,15 +36,23 @@ public class UserController {
 	@Autowired
 	UserService userService;
 
+	@Resource
+	OrgService orgService;
+
 	/**
 	 * 注册之前调用，检查用户名是否已经存在
 	 * @param username 用户名
 	 * @return
 	 */
-	@GetMapping("userExist")
+	@GetMapping("/userExist")
 	public JsonResult userExist(@RequestParam("username") String username) {
 		int result = userService.userExist(username);
 		return result == 1 ? JsonResult.errorMsg("用户名已存在") : JsonResult.ok();
+	}
+
+	@PostMapping("/isLogin")
+	public JsonResult isLogin() {
+		return JsonResult.ok();
 	}
 
 	/**
@@ -49,7 +62,7 @@ public class UserController {
 	 * @return
 	 */
 	@RequestMapping(value = "/register", method = RequestMethod.POST)
-	public JsonResult register(HttpSession session, HttpServletResponse response, @RequestBody @Valid User user) {
+	public JsonResult register(HttpSession session, HttpServletResponse response, @RequestBody @Valid User user) throws UnsupportedEncodingException {
 		user.setPassword(MD5.md5PasswordEncoder(user.getPassword()));
 		if (user.getNickname() == null) {
 			// 若昵称为空，则初始化为userId
@@ -57,13 +70,22 @@ public class UserController {
 		}
 		int result = userService.register(user);
 		if (result == 1) {
+			user.setPassword(null);
 			session.setAttribute("SYSTEM_USER_SESSION", user);
-			Cookie cookie = new Cookie("username", user.getNickname());
-			cookie.setHttpOnly(true);
-			cookie.setMaxAge(60 * 60);
+			Cookie cookie = new Cookie("username",user.getUsername());
+			cookie.setMaxAge(24 * 60 * 60);
+			cookie.setPath("/");
+			cookie.setDomain(null);
 			response.addCookie(cookie);
-			WebSocketServer.loginUsers.put(user.getUsername(), user.getNickname());
-			return JsonResult.ok();
+			if (user.getRoleType() < 2) {
+				Org org = orgService.getOrgById(user.getOrgCode());
+				WebSocketServer.loginOrg.put(user.getOrgCode().toString(), org.getServerAddress());
+			}
+			Map<String, String> res = new HashMap<>();
+			res.put("nickname", user.getNickname());
+			res.put("role", user.getRoleType().toString());
+			res.put("orgCode", user.getOrgCode().toString());
+			return JsonResult.ok(res);
 		}
 		return JsonResult.errorMsg("注册失败");
 	}
@@ -80,26 +102,36 @@ public class UserController {
 		user.setPassword(MD5.md5PasswordEncoder(user.getPassword()));
 		User result = userService.authenticate(user);
 		if (result != null) {
+			result.setPassword(null);
 			session.setAttribute("SYSTEM_USER_SESSION", result);
-			Cookie cookie = new Cookie("nickname", result.getNickname());
-			cookie.setMaxAge(30 * 24 * 60 * 60);
+			Cookie cookie = new Cookie("username", user.getUsername());
+			cookie.setMaxAge(24 * 60 * 60);
 			cookie.setPath("/");
-			cookie.setDomain("localhost");
 			response.addCookie(cookie);
-			WebSocketServer.loginUsers.put(result.getUsername(), result.getNickname());
-			return JsonResult.ok(result.getUsername());
+			if (result.getRoleType() < 2) {
+				Org org = orgService.getOrgById(result.getOrgCode());
+				WebSocketServer.loginOrg.put(result.getOrgCode().toString(), org.getServerAddress());
+			}
+			Map<String, String> res = new HashMap<>();
+			res.put("nickname", result.getNickname());
+			res.put("role", result.getRoleType().toString());
+			res.put("orgCode", result.getOrgCode().toString());
+			return JsonResult.ok(res);
 		}
 		return JsonResult.errorMsg("用户名/密码错误");
 	}
 
 	@PostMapping("/logout")
-	public JsonResult logout(HttpSession session, HttpServletRequest request, HttpServletResponse response) {
+	public JsonResult logout(HttpSession session, HttpServletResponse response) {
+		User logoutUser = (User) session.getAttribute("SYSTEM_USER_SESSION");
 		session.removeAttribute("SYSTEM_USER_SESSION");
-		Cookie cookie = new Cookie("nickname", "");
+		Cookie cookie = new Cookie("username", "");
 		cookie.setMaxAge(0);
-		cookie.setPath("/");
-		cookie.setDomain("localhost");
+		cookie.setPath(null);
 		response.addCookie(cookie);
+		if (logoutUser.getRoleType() < 2) {
+			WebSocketServer.loginOrg.remove(logoutUser.getOrgCode().toString());
+		}
 		return JsonResult.ok();
 	}
 
@@ -114,11 +146,11 @@ public class UserController {
 		return JsonResult.ok(ret);
 	}
 
-	// 临时客户端用生成公钥及加解密接口
+	// 临时客户端用，生成公钥及加解密接口
 	@RequestMapping(value = "/keyGen", method = RequestMethod.POST)
-	public BcpKeyPair keyGen(@RequestBody PP pp) {
+	public JsonResult keyGen(@RequestBody PP pp) {
 		BcpKeyPair keyGen = BCP.keyGen(pp.getN(), pp.getG());
-		return keyGen;
+		return JsonResult.ok(keyGen);
 	}
 
 	@RequestMapping(value = "/enc", method = RequestMethod.POST)

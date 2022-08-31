@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.bcp.serverc.mapper.TrainModelMapper">
-  <resultMap id="BaseResultMap" type="com.bcp.serverc.model.TrainModel">
+<mapper namespace="com.bcp.servers.mapper.TrainModelMapper">
+  <resultMap id="BaseResultMap" type="com.bcp.servers.model.TrainModel">
     <!--
       WARNING - @mbg.generated
     -->
@@ -15,7 +15,7 @@
     <result column="status" jdbcType="INTEGER" property="status" />
   </resultMap>
 
-  <select id="selectByConditions" parameterType="com.bcp.serverc.model.TrainModel" resultMap="BaseResultMap">
+  <select id="selectByConditions" parameterType="com.bcp.servers.model.TrainModel" resultMap="BaseResultMap">
     SELECT ID, MODEL_NAME, ORG_CODE, CREATE_TIME, UPDATE_TIME, CREATE_USER, `PATH`, `STATUS`
     FROM train_model
     <where>

@@ -1,6 +1,6 @@
-package com.bcp.serverc.mapper;
+package com.bcp.servers.mapper;
 
-import com.bcp.serverc.model.TrainModel;
+import com.bcp.servers.model.TrainModel;
 import tk.mybatis.mapper.common.Mapper;
 
 import java.util.List;

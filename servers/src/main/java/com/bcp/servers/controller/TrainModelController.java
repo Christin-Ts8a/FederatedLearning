@@ -1,8 +1,8 @@
-package com.bcp.serverc.controller;
+package com.bcp.servers.controller;
 
 import com.bcp.general.util.JsonResult;
-import com.bcp.serverc.model.TrainModel;
-import com.bcp.serverc.service.TrainModelService;
+import com.bcp.servers.model.TrainModel;
+import com.bcp.servers.service.TrainModelService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;

@@ -26,4 +26,11 @@ public interface OrgService {
      * @return
      */
     List<Org> list(Org org);
+
+    /**
+     * 通过机构 ID 获取机构信息
+     * @param id 机构 ID
+     * @return
+     */
+    Org getOrgById(Long id);
 }
