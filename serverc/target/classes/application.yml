@@ -1,10 +1,20 @@
 server:
   port: 8088
+  servlet:
+    session:
+      timeout: 3600
 spring:
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
   datasource:
-    url: jdbc:mysql://localhost:3306/bcp_server_c?characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+#    url: jdbc:mysql://rm-2zewnss316uzyzo66wo.mysql.rds.aliyuncs.com:3306/bcp_server_c?characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+#    username: pub_account
+#    password: Pub_account
+    url: jdbc:mysql://34.148.171.165:3306/bcp_server_c?characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
-    password: Qq123903
+    password: Admin@123
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 mybatis:

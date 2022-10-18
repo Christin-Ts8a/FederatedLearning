@@ -4,6 +4,7 @@ import com.bcp.general.crypto.BcpCiphertext;
 import com.bcp.general.crypto.BcpKeyPair;
 import com.bcp.general.crypto.PP;
 import com.bcp.general.util.JsonResult;
+import com.bcp.general.util.LoginStatusUtil;
 import com.bcp.serverc.crypto.BCP;
 import com.bcp.serverc.crypto.MD5;
 import com.bcp.serverc.model.Org;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
@@ -62,7 +64,7 @@ public class UserController {
 	 * @return
 	 */
 	@RequestMapping(value = "/register", method = RequestMethod.POST)
-	public JsonResult register(HttpSession session, HttpServletResponse response, @RequestBody @Valid User user) throws UnsupportedEncodingException {
+	public JsonResult register(HttpSession session, HttpServletRequest request, HttpServletResponse response, @RequestBody @Valid User user) throws UnsupportedEncodingException {
 		user.setPassword(MD5.md5PasswordEncoder(user.getPassword()));
 		if (user.getNickname() == null) {
 			// 若昵称为空，则初始化为userId
@@ -71,11 +73,13 @@ public class UserController {
 		int result = userService.register(user);
 		if (result == 1) {
 			user.setPassword(null);
+			String domainName = LoginStatusUtil.getDomainName(request);
+			System.out.println(domainName);
 			session.setAttribute("SYSTEM_USER_SESSION", user);
 			Cookie cookie = new Cookie("username",user.getUsername());
-			cookie.setMaxAge(24 * 60 * 60);
+			cookie.setMaxAge(60 * 60);
 			cookie.setPath("/");
-			cookie.setDomain(null);
+			cookie.setDomain("127.0.0.1");
 			response.addCookie(cookie);
 			if (user.getRoleType() < 2) {
 				Org org = orgService.getOrgById(user.getOrgCode());
@@ -98,15 +102,18 @@ public class UserController {
 	 * @return
 	 */
 	@PostMapping("/login")
-	public JsonResult login(HttpSession session, HttpServletResponse response, @RequestBody User user) {
+	public JsonResult login(HttpSession session, HttpServletRequest request, HttpServletResponse response, @RequestBody User user) {
 		user.setPassword(MD5.md5PasswordEncoder(user.getPassword()));
 		User result = userService.authenticate(user);
 		if (result != null) {
 			result.setPassword(null);
+			String domainName = LoginStatusUtil.getDomainName(request);
+			System.out.println(domainName);
 			session.setAttribute("SYSTEM_USER_SESSION", result);
 			Cookie cookie = new Cookie("username", user.getUsername());
-			cookie.setMaxAge(24 * 60 * 60);
+			cookie.setMaxAge(60);
 			cookie.setPath("/");
+			cookie.setDomain(domainName);
 			response.addCookie(cookie);
 			if (result.getRoleType() < 2) {
 				Org org = orgService.getOrgById(result.getOrgCode());
