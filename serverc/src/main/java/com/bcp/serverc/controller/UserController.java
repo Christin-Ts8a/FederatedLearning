@@ -74,12 +74,11 @@ public class UserController {
 		if (result == 1) {
 			user.setPassword(null);
 			String domainName = LoginStatusUtil.getDomainName(request);
-			System.out.println(domainName);
 			session.setAttribute("SYSTEM_USER_SESSION", user);
 			Cookie cookie = new Cookie("username",user.getUsername());
 			cookie.setMaxAge(60 * 60);
 			cookie.setPath("/");
-			cookie.setDomain("127.0.0.1");
+			cookie.setDomain(domainName);
 			response.addCookie(cookie);
 			if (user.getRoleType() < 2) {
 				Org org = orgService.getOrgById(user.getOrgCode());
@@ -89,6 +88,7 @@ public class UserController {
 			res.put("nickname", user.getNickname());
 			res.put("role", user.getRoleType().toString());
 			res.put("orgCode", user.getOrgCode().toString());
+			res.put("userId", user.getUserId().toString());
 			return JsonResult.ok(res);
 		}
 		return JsonResult.errorMsg("注册失败");
@@ -108,7 +108,6 @@ public class UserController {
 		if (result != null) {
 			result.setPassword(null);
 			String domainName = LoginStatusUtil.getDomainName(request);
-			System.out.println(domainName);
 			session.setAttribute("SYSTEM_USER_SESSION", result);
 			Cookie cookie = new Cookie("username", user.getUsername());
 			cookie.setMaxAge(60);
@@ -123,6 +122,7 @@ public class UserController {
 			res.put("nickname", result.getNickname());
 			res.put("role", result.getRoleType().toString());
 			res.put("orgCode", result.getOrgCode().toString());
+			res.put("userId", result.getUserId().toString());
 			return JsonResult.ok(res);
 		}
 		return JsonResult.errorMsg("用户名/密码错误");

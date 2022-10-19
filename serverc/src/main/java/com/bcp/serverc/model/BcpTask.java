@@ -57,28 +57,28 @@ public class BcpTask {
      */
     @Column(name = "create_user")
     @ApiModelProperty(hidden = true)
-    private String createUser;
+    private Long createUser;
 
     /**
      * 最后更新人username
      */
     @Column(name = "update_user")
     @ApiModelProperty(hidden = true)
-    private String updateUser;
+    private Long updateUser;
 
     /**
      * 开始任务人username
      */
     @Column(name = "start_user")
     @ApiModelProperty(hidden = true)
-    private String startUser;
+    private Long startUser;
 
     /**
      * 结束任务人id
      */
     @Column(name = "finish_user")
     @ApiModelProperty(hidden = true)
-    private String finishUser;
+    private Long finishUser;
 
     /**
      * 创建时间
@@ -278,7 +278,7 @@ public class BcpTask {
      *
      * @return create_user - 创建人id
      */
-    public String getCreateUser() {
+    public Long getCreateUser() {
         return createUser;
     }
 
@@ -287,7 +287,7 @@ public class BcpTask {
      *
      * @param createUser 创建人id
      */
-    public void setCreateUser(String createUser) {
+    public void setCreateUser(Long createUser) {
         this.createUser = createUser;
     }
 
@@ -296,7 +296,7 @@ public class BcpTask {
      *
      * @return update_user - 最后更新人id
      */
-    public String getUpdateUser() {
+    public Long getUpdateUser() {
         return updateUser;
     }
 
@@ -305,7 +305,7 @@ public class BcpTask {
      *
      * @param updateUser 最后更新人id
      */
-    public void setUpdateUser(String updateUser) {
+    public void setUpdateUser(Long updateUser) {
         this.updateUser = updateUser;
     }
 
@@ -314,7 +314,7 @@ public class BcpTask {
      *
      * @return start_user - 开始任务人id
      */
-    public String getStartUser() {
+    public Long getStartUser() {
         return startUser;
     }
 
@@ -323,7 +323,7 @@ public class BcpTask {
      *
      * @param startUser 开始任务人id
      */
-    public void setStartUser(String startUser) {
+    public void setStartUser(Long startUser) {
         this.startUser = startUser;
     }
 
@@ -332,7 +332,7 @@ public class BcpTask {
      *
      * @return finish_user - 结束任务人id
      */
-    public String getFinishUser() {
+    public Long getFinishUser() {
         return finishUser;
     }
 
@@ -341,7 +341,7 @@ public class BcpTask {
      *
      * @param finishUser 结束任务人id
      */
-    public void setFinishUser(String finishUser) {
+    public void setFinishUser(Long finishUser) {
         this.finishUser = finishUser;
     }
 

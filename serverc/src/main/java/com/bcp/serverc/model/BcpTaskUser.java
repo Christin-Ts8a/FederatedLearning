@@ -19,6 +19,12 @@ public class BcpTaskUser {
      * userid
      */
     @Id
+    @Column(name = "task_user_id")
+    private Long taskUserId;
+
+    /**
+     * username
+     */
     @Column(name = "task_user_name")
     private String taskUserName;
 
@@ -44,6 +50,14 @@ public class BcpTaskUser {
      */
     public void setTaskId(Long taskId) {
         this.taskId = taskId;
+    }
+
+    public Long getTaskUserId() {
+        return taskUserId;
+    }
+
+    public void setTaskUserId(Long taskUserId) {
+        this.taskUserId = taskUserId;
     }
 
     /**
@@ -86,6 +100,7 @@ public class BcpTaskUser {
     public String toString() {
         return "BcpTaskUser{" +
                 "taskId=" + taskId +
+                ", taskUserId='" + taskUserId + '\'' +
                 ", taskUserName='" + taskUserName + '\'' +
                 ", h='" + h + '\'' +
                 '}';

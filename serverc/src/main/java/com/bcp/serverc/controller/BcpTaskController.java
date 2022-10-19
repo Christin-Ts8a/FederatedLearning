@@ -5,19 +5,17 @@ import java.util.Arrays;
 
 import com.bcp.general.util.JsonResult;
 import com.bcp.serverc.model.User;
+import net.sf.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.bcp.serverc.config.ServerProperties;
 import com.bcp.serverc.model.BcpTask;
 import com.bcp.general.model.BcpUserModel;
 import com.bcp.serverc.service.impl.BcpTaskServiceImpl;
+import springfox.documentation.spring.web.json.Json;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -46,7 +44,7 @@ public class BcpTaskController {
 	 * @return
 	 */
 	@RequestMapping(value = "/list", method = RequestMethod.GET)
-	public Object getTaskList(String username) {
+	public Object getTaskList(@RequestParam(name = "username", required = false) String username) {
 		Object ret = bcpTaskSrv.getTaskList(username, false);
 
 		return ret;
@@ -88,5 +86,11 @@ public class BcpTaskController {
 			@RequestParam boolean isLatest) {
 		Object ret = bcpTaskSrv.getDesignatedOrLatestResult(Arrays.asList(taskId), username, round, isLatest);
 		return ret;
+	}
+
+	@PostMapping("/test")
+	public JsonResult test(@RequestBody JSONObject param){
+		bcpTaskSrv.test(param);
+		return JsonResult.ok();
 	}
 }

@@ -10,10 +10,10 @@ import com.bcp.general.util.JsonResult;
 import com.bcp.general.util.WXMappingJackson2HttpMessageConverter;
 import com.bcp.serverc.config.ServerProperties;
 import com.bcp.serverc.constant.CryptoConstant;
-import com.bcp.serverc.controller.WebSocketServer;
 import com.bcp.serverc.crypto.BCP4C;
 import com.bcp.serverc.mapper.*;
 import com.bcp.serverc.model.*;
+import net.sf.json.JSONObject;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.SetUtils;
 import org.slf4j.Logger;
@@ -23,12 +23,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import tk.mybatis.mapper.entity.Example;
 import tk.mybatis.mapper.entity.Example.Criteria;
+
 import javax.annotation.Resource;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.net.http.HttpRequest;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.Map.Entry;
@@ -131,7 +132,7 @@ public class BcpTaskServiceImpl {
 		// 批量更新本次任务状态
 		task.setStartTime(new Date());
 		User loginUser = (User) request.getSession().getAttribute("SYSTEM_USER_SESSION");
-		task.setStartUser(loginUser.getUsername());
+		task.setStartUser(loginUser.getUserId());
 		task.setTaskState(BigDecimal.ONE);
 		if (BCP4C.isValidPP(pp)) {
 			task.setTaskN(pp.getN().toString());
@@ -364,7 +365,10 @@ public class BcpTaskServiceImpl {
 		Integer nextRound = bcpTask.getCurrentRound() + 1;
 		if (nextRound.compareTo(computeRounds) >= 0) {
 			// 加一后若大于了最大轮数，则结束任务
-			bcpTask.setFinishUser(username);
+			User condition = new User();
+			condition.setUsername(username);
+			User currentUser = userMapper.selectOne(condition);
+			bcpTask.setFinishUser(currentUser.getUserId());
 			finishBcpTask(bcpTask);
 		}
 		BcpTask nextRoundTask = new BcpTask();
@@ -680,7 +684,7 @@ public class BcpTaskServiceImpl {
 	 */
 	public void finishBcpTask(BcpTask task) {
 		Long taskId = task.getTaskId();
-		String finishUserName = task.getFinishUser();
+		Long finishUserName = task.getFinishUser();
 
 		BcpTask finishTask = new BcpTask();
 		finishTask.setTaskId(taskId);
@@ -703,12 +707,21 @@ public class BcpTaskServiceImpl {
 	public Object createBcpTask(HttpServletRequest request, BcpTask bcpTask) {
 		// 1.设置基础信息，id数据库自动生成创建时不传
 		logger.info("createBcpTask");
+		for (Cookie cookie : request.getCookies()) {
+			if (cookie.getName().equals("username")) {
+				String username = cookie.getValue();
+				System.out.println("username: " + username);
+			}
+		}
 		HttpSession session = request.getSession();
 		User loginUser = (User) session.getAttribute("SYSTEM_USER_SESSION");
-		String currentLoginUserName = loginUser.getUsername();
+		Long currentLoginUserId = loginUser.getUserId();
+		System.out.println("currentLoginUserId： " + currentLoginUserId);
 		bcpTask.setCurrentRound(0);// 默认第1轮为开始
-		bcpTask.setCreateUser(currentLoginUserName);
+		bcpTask.setCreateUser(currentLoginUserId);
+		bcpTask.setUpdateUser(currentLoginUserId);
 		bcpTask.setCreateTime(new Date());
+		bcpTask.setUpdateTime(new Date());
 		bcpTask.setTaskState(BigDecimal.ZERO);
 		bcpTask.setTaskId(null);// 主键要自增，前台传的置为空
 		if (bcpTask.getTaskKappa() == null) {
@@ -770,8 +783,8 @@ public class BcpTaskServiceImpl {
 		}
 
 		// 1.若未开始则可以修改
-		String currentLoginUserName = ((User)request.getSession()).getUsername();
-		bcpTask.setUpdateUser(currentLoginUserName);
+		Long currentLoginUserId = ((User)request.getSession()).getUserId();
+		bcpTask.setUpdateUser(currentLoginUserId);
 		bcpTask.setUpdateTime(new Date());
 		bcpTask.setCurrentRound(0);// 默认第1轮为开始
 
@@ -956,7 +969,7 @@ public class BcpTaskServiceImpl {
 		logger.info("insBcpTaskUser");
 		if (CollectionUtils.isNotEmpty(taskUserList)) {
 			// 获取用户id集合，若不包含当前登录用户则加上
-			Set<String> taskUserIdSet = taskUserList.stream().map(BcpTaskUser::getTaskUserName)
+			Set<Long> taskUserIdSet = taskUserList.stream().map(BcpTaskUser::getTaskUserId)
 					.collect(Collectors.toSet());
 
 
@@ -968,12 +981,8 @@ public class BcpTaskServiceImpl {
 			// 用set先删后增
 			BcpTaskUser insTaskUser = new BcpTaskUser();
 			insTaskUser.setTaskId(taskId);
-			taskUserIdSet.forEach((taskUserName) -> {
-//				User user = new User();
-//				user.setUsername(taskUserName);
-//				logger.info("insBcpTaskUser taskUserName " + user);
-//				logger.info("insBcpTaskUser taskUserName " + userMapper.selectOne(user));
-				insTaskUser.setTaskUserName(taskUserName);
+			taskUserIdSet.forEach((taskUserId) -> {
+				insTaskUser.setTaskUserId(taskUserId);
 				bcpTaskUserMapper.insert(insTaskUser);
 			});
 		}
@@ -1054,4 +1063,10 @@ public class BcpTaskServiceImpl {
 		return resultList;
 	}
 
+	public void test(JSONObject param) {
+		RestTemplate rest = new RestTemplate();
+		rest.getMessageConverters().add(new WXMappingJackson2HttpMessageConverter());
+		PP pp = new PP();
+		rest.postForObject("http://127.0.0.1:8000/receive/", pp, Integer.class);
+	}
 }

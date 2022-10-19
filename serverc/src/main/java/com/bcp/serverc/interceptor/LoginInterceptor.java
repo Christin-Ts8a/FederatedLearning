@@ -38,11 +38,7 @@ public class LoginInterceptor {
         Object userSessionInfo = session.getAttribute("SYSTEM_USER_SESSION");
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
-            System.out.println(request.getRequestURL());
             for (Cookie cookie : cookies) {
-                System.out.println(cookie.getName() + " " +cookie.getValue());
-                System.out.println(cookie.getMaxAge() + " " +cookie.getDomain());
-                System.out.println(cookie.getPath());
                 if ("username".equals(cookie.getName())
                         && cookie.getMaxAge() > 0
                         && userSessionInfo == null) {
