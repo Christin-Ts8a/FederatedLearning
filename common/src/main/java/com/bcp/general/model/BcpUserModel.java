@@ -12,7 +12,7 @@ public class BcpUserModel {
 	/**
 	 * 标识用户id
 	 */
-	private String orgCode;
+	private Long userId;
 	
 	/**
 	 * 标识这是属于哪个任务的
@@ -55,12 +55,12 @@ public class BcpUserModel {
 		this.struct = struct;
 	}
 
-	public String getOrgCode() {
-		return orgCode;
+	public Long getUserId() {
+		return userId;
 	}
 
-	public void setOrgCode(String username) {
-		this.orgCode = username;
+	public void setUserId(Long userId) {
+		this.userId = userId;
 	}
 
 	public BigInteger getH() {
@@ -114,7 +114,7 @@ public class BcpUserModel {
 	@Override
 	public String toString() {
 		return "BcpUserModel{" +
-				"orgCode='" + orgCode + '\'' +
+				"userId='" + userId + '\'' +
 				", taskId=" + taskId +
 				", round=" + round +
 				", stop=" + stop +

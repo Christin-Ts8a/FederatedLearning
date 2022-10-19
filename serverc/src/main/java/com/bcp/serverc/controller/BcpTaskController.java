@@ -75,7 +75,7 @@ public class BcpTaskController {
 	public Object submitBcpTask(HttpServletRequest request, @RequestBody BcpUserModel userModel) {
 		User loginUser = (User) request.getSession().getAttribute("SYSTEM_USER_SESSION");
 		logger.info("submitData loginUser: " + loginUser);
-		userModel.setOrgCode(loginUser.getOrgCode().toString());
+		userModel.setUserId(loginUser.getUserId());
 		System.out.println("loginUser.getOrgCode().toString(): "+loginUser.getOrgCode().toString());
 		bcpTaskSrv.submitBcpTask(userModel);
 		return "submit success";

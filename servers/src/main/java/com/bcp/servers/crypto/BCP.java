@@ -820,37 +820,37 @@ public class BCP implements BCPConstant {
 				.collect(Collectors.toList());
 	}
 
-//	public static void main(String[] args) {
-//		// 明文
-//		BigInteger m1 = new BigInteger("22");
-//		BigInteger m2 = new BigInteger("-23");
-//		BigInteger m3 = new BigInteger("53");
-//
-//		// bcp参数
-//		BCP bcp = new BCP(256, 100);
-//		PP pp = bcp.getPP();
-//		BigInteger n = pp.getN();
-//		BigInteger g = pp.getG();
-//		BigInteger[] ha = keyGen(n, g);
-//		BigInteger h = ha[0];
-//		BigInteger a = ha[1];
-//
-//		// 密文
-//		BcpCiphertext c1 = BCP.enc(n, g, h, m1);
-//		BcpCiphertext c2 = BCP.enc(n, g, h, m2);
-//		BcpCiphertext c3 = BCP.enc(n, g, h, m3);
-//
-//		BcpCiphertext c12 = BCP.add(n, c1, c2);
-//		BcpCiphertext c123 = BCP.add(n, c12, c3);
-//
-//		BigInteger d12 = dec(n, a, c12);
-//		BigInteger d123 = dec(n, a, c123);
-//		System.out.println(d12);
-//		System.out.println(d123);
-//
-//		System.out.println(d12.modInverse(n));
-//		System.out.println(d12.divide(new BigInteger("2")));
+	public static void main(String[] args) {
+		// 明文
+		BigInteger m1 = new BigInteger("22");
+		BigInteger m2 = new BigInteger("-23");
+		BigInteger m3 = new BigInteger("53");
+
+		// bcp参数
+		BCP bcp = new BCP(256, 100);
+		PP pp = bcp.getPP();
+		BigInteger n = pp.getN();
+		BigInteger g = pp.getG();
+		BcpKeyPair ha = keyGen(n, g);
+		BigInteger h = ha.getH();
+		BigInteger a = ha.getA();
+
+		// 密文
+		BcpCiphertext c1 = BCP.enc(n, g, h, m1);
+		BcpCiphertext c2 = BCP.enc(n, g, h, m2);
+		BcpCiphertext c3 = BCP.enc(n, g, h, m3);
+
+		BcpCiphertext c12 = BCP.add(n, c1, c2);
+		BcpCiphertext c123 = BCP.add(n, c12, c3);
+
+		BigInteger d12 = dec(n, a, c12);
+		BigInteger d123 = dec(n, a, c123);
+		System.out.println(d12);
+		System.out.println(d123);
+
+		System.out.println(d12.modInverse(n));
+		System.out.println(d12.divide(new BigInteger("2")));
 //		System.out.println(Arrays.toString(d12.divideAndRemainder(new BigInteger("2"))));
-//	}
+	}
 
 }

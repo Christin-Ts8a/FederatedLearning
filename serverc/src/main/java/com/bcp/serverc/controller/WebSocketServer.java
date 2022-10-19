@@ -179,7 +179,7 @@ public class WebSocketServer {
         ObjectMapper objectMapper = new ObjectMapper();
         // 获取用户发来参数
         BcpUserModel userModel = objectMapper.readValue(message, BcpUserModel.class);
-        userModel.setOrgCode(loginOrgCode);// websocket环境下设置用户id
+//        userModel.setUserId(loginOrgCode);// websocket环境下设置用户id
 
         logger.info("receive data from " + getRemoteAddress(session).getHostName() + ": " + userModel.toString());
 

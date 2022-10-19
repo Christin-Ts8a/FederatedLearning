@@ -21,4 +21,11 @@
       <if test="frontAddress != null and frontAddress != ''">AND FRONT_ADDRESS = #{frontAddress}</if>
     </where>
   </select>
+
+  <select id="queryAddressesByTaskId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    SELECT o.id, o.org_name, o.front_address, o.server_address
+    FROM bcp_task_user AS btu LEFT JOIN `user` AS u ON btu.task_user_id = u.user_id
+                              LEFT JOIN org AS o ON u.org_code = o.id
+    WHERE btu.task_id = #{taskId}
+  </select>
 </mapper>
