@@ -134,15 +134,15 @@ public class BcpTaskServiceImpl {
 			logger.info("broadcast result: " + result);
 		}
 		logger.info("start training");
-		task.setCurrentRound(task.getCurrentRound() + 1);
+		task.setCurrentRound(task.getCurrentRound());
 		bcpTaskMapper.updateByPrimaryKeySelective(task);
 		while (task.getComputeRounds().compareTo(task.getCurrentRound()) >= 0) {
-			logger.info("current training round: " + task.getComputeRounds() + "/" + task.getComputeRounds());
+			logger.info("current training round: " + task.getCurrentRound() + "/" + task.getComputeRounds());
 			for (Org org : orgList) {
 				logger.info("sending train request");
 				RestTemplate rest = new RestTemplate();
 				rest.getMessageConverters().add(new WXMappingJackson2HttpMessageConverter());
-				Integer bcpUserModel = rest.postForObject("http://" + org.getServerAddress() + "/train_model/", task.getCurrentRound(), Integer.class);
+				Integer bcpUserModel = rest.postForObject("http://" + org.getServerAddress() + "/train_model/", task, Integer.class);
 //				// TODO 进行盲化 -> 聚合 -> 去盲化 -> 下发 -> 检查通信是否完成
 //				if (bcpUserModel != null) {
 //					submitBcpTask(bcpUserModel);
@@ -154,7 +154,7 @@ public class BcpTaskServiceImpl {
 //				}
 				logger.info("bcpUserModel: " + bcpUserModel);
 			}
-			task.setComputeRounds(task.getComputeRounds() + 1);
+			task.setCurrentRound(task.getCurrentRound() + 1);
 			bcpTaskMapper.updateByPrimaryKeySelective(task);
 		}
 //		task.setFinishTime(new Date());
@@ -1047,7 +1047,7 @@ public class BcpTaskServiceImpl {
 		RestTemplate rest = new RestTemplate();
 		rest.getMessageConverters().add(new WXMappingJackson2HttpMessageConverter());
 		PP pp = new PP();
-		Integer result = rest.postForObject("http://127.0.0.1:8000/receive/", pp, Integer.class);
+		List<Double> result = rest.postForObject("http://127.0.0.1:8000/train_model/", pp, List.class);
 		System.out.println(result);
 	}
 }

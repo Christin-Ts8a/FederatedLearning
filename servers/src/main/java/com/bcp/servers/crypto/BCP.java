@@ -1,7 +1,8 @@
 package com.bcp.servers.crypto;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -12,9 +13,6 @@ import com.bcp.general.crypto.BcpKeyPair;
 import com.bcp.general.crypto.PP;
 import com.bcp.general.constant.BCPConstant;
 import org.springframework.util.CollectionUtils;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
 
 public class BCP implements BCPConstant {
 
@@ -834,7 +832,6 @@ public class BCP implements BCPConstant {
 		BcpKeyPair ha = keyGen(n, g);
 		BigInteger h = ha.getH();
 		BigInteger a = ha.getA();
-
 		// 密文
 		BcpCiphertext c1 = BCP.enc(n, g, h, m1);
 		BcpCiphertext c2 = BCP.enc(n, g, h, m2);
@@ -850,7 +847,7 @@ public class BCP implements BCPConstant {
 
 		System.out.println(d12.modInverse(n));
 		System.out.println(d12.divide(new BigInteger("2")));
-//		System.out.println(Arrays.toString(d12.divideAndRemainder(new BigInteger("2"))));
+		System.out.println(Arrays.toString(d12.divideAndRemainder(new BigInteger("2"))));
 	}
 
 }
