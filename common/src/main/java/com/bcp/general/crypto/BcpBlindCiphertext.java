@@ -32,4 +32,10 @@ public class BcpBlindCiphertext extends BcpCiphertext {
 		this.blindness = blindness;
 	}
 
+	@Override
+	public String toString() {
+		return "BcpBlindCiphertext{" +
+				"blindness=" + blindness +
+				'}';
+	}
 }

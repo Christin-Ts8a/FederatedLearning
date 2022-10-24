@@ -1,7 +1,7 @@
 package com.bcp.serverc.crypto;
 
 import java.math.BigInteger;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -15,10 +15,6 @@ import com.bcp.general.crypto.BcpKeyPair;
 import com.bcp.general.crypto.PP;
 import com.bcp.general.constant.BCPConstant;
 import org.springframework.util.CollectionUtils;
-
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
 
 public class BCP implements BCPConstant {
 
@@ -383,19 +379,22 @@ public class BCP implements BCPConstant {
 		while (r.compareTo(N2) != -1 || r.compareTo(BigInteger.ZERO) == -1) {
 			r = new BigInteger(N2.bitLength(), new Random());
 		}
+		r = new BigInteger("4370106768300057085234988736511035998260225465142363790092142223379586617544717463438573328639936887199727944488718322411385395304652990064795873780477466287484478063120757618969751978933094659861252242867278557803461418691667331615567993618462816966804706815980471852147622569190282527283981353760023872138600079638231555578470476247213913030372227422875921928918910960340600737914162311368228004092879149697528035707357317088506882743930113135225155169346008336044771267601886194119374789358358846568382533735661790950727462958325554919589346764816955659464033596164226412320025023077738801327764819349052507256082674421318684798251990971378980147844514047269464575075664613254671333928443403880624749835809713079178062579539953344612996049213143654511017385790387248172413777624698847028847365638732681486607136345507574030515423385774419");
 
 		BigInteger A = g.modPow(r, N2);
 
 		BigInteger B1 = h.modPow(r, N2);
-		BigInteger B2 = m.multiply(N).add(BigInteger.ONE).mod(N2);
-		BigInteger B = B1.multiply(B2).mod(N2);
+		BigInteger temp = m.multiply(N).add(BigInteger.ONE);
+		BigInteger B2 = temp.subtract(temp.divideAndRemainder(N2)[0].multiply(N2));
+		BigInteger B;
+		if (m.compareTo(BigInteger.ZERO) < 0) {
+			B = B1.multiply(B2).mod(N2).subtract(N2);
+		} else {
+			B = B1.multiply(B2).mod(N2);
+		}
 
 		return new BcpCiphertext(A, B);
 	}
-
-	// public static BcpCiphertext enc(PP pp, BigInteger h, BigInteger m) {
-	// return enc(pp.getN(), pp.getG(), h, m);
-	// }
 
 	/**
 	 * 
@@ -414,9 +413,19 @@ public class BCP implements BCPConstant {
 		BigInteger InverseA = A.modInverse(N2);// 是否是A模N2的逆元论文中并未说明
 
 		BigInteger tempA = InverseA.modPow(a, N2);
-		BigInteger tempB = B.mod(N2);
-		BigInteger tempC = tempA.multiply(tempB).mod(N2);
-		BigInteger tempD = tempC.subtract(BigInteger.ONE.mod(N2)).mod(N2);
+		BigInteger tempB;
+		BigInteger tempC;
+		BigInteger tempD;
+		if (B.compareTo(BigInteger.ZERO) < 0) {
+			tempB = B.mod(N2).subtract(N2);
+			tempC = tempA.multiply(tempB).mod(N2).subtract(N2);
+			tempD = tempC.subtract(BigInteger.ONE.mod(N2)).mod(N2).subtract(N2);
+		}
+		else {
+			tempB = B.mod(N2);
+			tempC = tempA.multiply(tempB).mod(N2);
+			tempD = tempC.subtract(BigInteger.ONE.mod(N2)).mod(N2);
+		}
 		return tempD.divide(N);
 	}
 
@@ -451,147 +460,37 @@ public class BCP implements BCPConstant {
 		BigInteger delta = mN.modInverse(N);
 		BigInteger gamma = amodN.multiply(rmodN).mod(N);
 
-		BigInteger tempm = B.modPow(mN, N2).multiply(g.modInverse(N2).modPow(gamma.multiply(mN), N2)).mod(N2)
-				.subtract(BigInteger.ONE.mod(N2)).mod(N2);
-		return tempm.multiply(delta).divide(N).mod(N);
+		BigInteger result;
+		if (B.compareTo(BigInteger.ZERO) < 0) {
+			BigInteger bModPowMN = B.modPow(mN, N2).subtract(N2);
+			BigInteger denominator = bModPowMN
+					.multiply(g.modInverse(N2).modPow(gamma.multiply(mN), N2))
+					.subtract(BigInteger.ONE.mod(N2))
+					.mod(N2)
+					.subtract(N2);
+			result = denominator
+					.multiply(delta)
+					.divide(N)
+					.mod(N)
+					.subtract(N);
+		} else {
+			BigInteger tempm = B.modPow(mN, N2)
+					.multiply(g.modInverse(N2).modPow(gamma.multiply(mN), N2))
+					.mod(N2)
+					.subtract(BigInteger.ONE.mod(N2))
+					.mod(N2);
+			result = tempm
+					.multiply(delta)
+					.divide(N)
+					.mod(N);
+		}
+
+		return result;
 	}
-
-	// the method to process the divided long plaintext
-	// it return a BigInteger[m.length][2]
-	// public static BigInteger[][] enc(BigInteger N, BigInteger g, BigInteger h,
-	// BigInteger[] m) {
-	// return new ForkJoinPool().invoke(new ParallelEncTask(N, g, h, m));
-	// }
-
-	// Input String m that length<2.pow(31)-1,and then convert m to String[]
-	// and convert String[] to BigInteger[] m
-	// with the arguement m,this method will invoke enc(m)
-	// public static BigInteger[][] randomEnc(BigInteger N, BigInteger g, BigInteger
-	// h, String m, int threshold,
-	// String charset, int padding, int kappa, String prefix) throws
-	// UnsupportedEncodingException {
-	// return BCP.enc(N, g, h,
-	// ProcessingText.preRandomDivideConvertText(m, threshold, charset, padding,
-	// kappa, prefix));
-	// }
-
-	// public static BigInteger[][] aptoticEnc(BigInteger N, BigInteger g,
-	// BigInteger h, String m, int threshold,
-	// String charset, int padding, int kappa, String prefix) throws
-	// UnsupportedEncodingException {
-	// return BCP.enc(N, g, h,
-	// ProcessingText.preAptoticDivideConvertText(m, threshold, charset, padding,
-	// kappa, prefix));
-	// }
-
-	// public static BigInteger[] dec(BigInteger N, BigInteger a, BigInteger[][] c)
-	// {
-	// return new ForkJoinPool().invoke(new ParallelDecTask(N, a, c));
-	// }
-
-	// public static String dec(BigInteger N, BigInteger a, BigInteger[][] c, String
-	// charset, String prefix)
-	// throws UnsupportedEncodingException {
-	// BigInteger[] dec = BCP.dec(N, a, c);
-	// return ProcessingText.preConvertMergeText(dec, charset, prefix);
-	// }
-
-	// public static String mDec(BigInteger N, BigInteger k, BigInteger g,
-	// BigInteger h, BigInteger mp, BigInteger mq,
-	// BigInteger[][] c, String charset, String prefix) throws
-	// UnsupportedEncodingException {
-	// return ProcessingText.preConvertMergeText(BCP.mDec(N, k, g, h, mp, mq, c),
-	// charset, prefix);
-	// }
-
-	// public static BigInteger[] mDec(BigInteger N, BigInteger k, BigInteger g,
-	// BigInteger h, BigInteger mp,
-	// BigInteger mq, BigInteger[][] c) {
-	// ExecutorService pool = Executors.newCachedThreadPool();
-	// RunnableMDec[] task = new RunnableMDec[c.length];
-	// for (int i = 0; i < task.length; i++) {
-	// pool.execute(task[i] = new RunnableMDec(N, k, g, h, mp, mq, c[i]));
-	// }
-	// pool.shutdown();
-	// while (!pool.isTerminated())
-	// ;
-	// BigInteger[] m = new BigInteger[c.length];
-	// for (int i = 0; i < m.length; i++) {
-	// m[i] = task[i].m;
-	// }
-	// return m;
-	// }
 
 	public static BigInteger mDec(PP pp, BigInteger h, MK mk, BcpCiphertext c) {
 		return mDec(pp.getN(), pp.getK(), pp.getG(), h, mk.getMp(), mk.getMq(), c);
 	}
-
-	// public static void main(String[] args) throws Exception {
-	// String m = "一二三四五六七八九十九八七六五四三二一1234567890abcdefghijklmnopqrstuvwxyz";
-	// String charset = "UTF-16LE";
-	// int padding = 10;
-	// int threshold = 50;
-	// String prefix = "z";
-	//
-	// Date a1 = new Date();
-	// long t1 = a1.getTime();
-	//
-	// BCP testbcp = new BCP(2048, DEFAULTCERTAINTY);
-	//
-	// Date a2 = new Date();
-	// long t2 = a2.getTime();
-	// long ms = t2 - t1;
-	// double s = (double) ms / 1000;// 若不进行强制转换，则会丢失一位以上的小数位
-	// String[] hms = countHM(s);
-	//
-	// BigInteger N = testbcp.pp.getN(), k = testbcp.pp.getK(), g =
-	// testbcp.pp.getG();
-	// BigInteger mp = testbcp.mk.getMp(), mq = testbcp.mk.getMq();
-	// int kappa = testbcp.kappa, certainty = testbcp.certainty;
-	//
-	// BigInteger[] key = testbcp.keyGen(testbcp.pp.getN(), testbcp.pp.getG());//
-	// 生成密钥对
-	// BigInteger h = key[0], a = key[1];
-	//
-	// BigInteger[] plaintext = ProcessingText.preAptoticDivideConvertText(m,
-	// threshold, charset, padding, kappa,
-	// prefix);
-	//
-	// BigInteger[][] c = BCP.enc(testbcp.pp.getN(), testbcp.pp.getG(), h,
-	// plaintext);
-	//
-	// String dec = BCP.dec(N, a, c, charset, prefix);
-	// String mDec = BCP.mDec(N, k, g, h, mp, mq, c, charset, prefix);
-	//
-	// String filename = "BCP" + kappa + "test.txt";
-	// PrintWriter pr = new PrintWriter(filename);
-	// pr.println("kappa=" + kappa);
-	// pr.println("certainty=" + certainty);
-	// pr.println("N=" + N);
-	// pr.println("N.length=" + N.bitLength());
-	// pr.println("k=" + k);
-	// pr.println("k.length=" + k.bitLength());
-	// pr.println("g=" + g);
-	// pr.println("g.length=" + g.bitLength());
-	// pr.println("mp=" + mp);
-	// pr.println("mp.length=" + mp.bitLength());
-	// pr.println("mq=" + mq);
-	// pr.println("mq.length=" + mq.bitLength());
-	// pr.println("h=" + h);
-	// pr.println("h.length=" + h.bitLength());
-	// pr.println("a=" + a);
-	// pr.println("a.length=" + a.bitLength());
-	// pr.println();
-	// for (int i = 0; i < plaintext.length; i++) {
-	// pr.println("plaintext[" + i + "]=" + plaintext[i]);
-	// }
-	// pr.println("Input=" + m);
-	// pr.println("dec =" + dec);
-	// pr.println("mDec =" + mDec);
-	// pr.println("Time consuming:" + hms[0] + "h" + hms[1] + "m" + hms[2] + "s");
-	//
-	// pr.close();
-	// }
 
 	public static String[] countHM(double s) {
 		long m = 0, h = 0;
@@ -644,7 +543,12 @@ public class BCP implements BCPConstant {
 	public static BcpCiphertext add(BigInteger N, BcpCiphertext a, BcpCiphertext b) {
 		BigInteger N2 = N.multiply(N);
 		BigInteger newA = a.getA().multiply(b.getA()).mod(N2);
-		BigInteger newB = a.getB().multiply(b.getB()).mod(N2);
+		BigInteger newB;
+		if (a.getB().compareTo(BigInteger.ZERO) < 0 ||b.getB().compareTo(BigInteger.ZERO) < 0) {
+			newB = a.getB().multiply(b.getB()).mod(N2).subtract(N2);
+		} else {
+			newB = a.getB().multiply(b.getB()).mod(N2);
+		}
 		return new BcpCiphertext(newA, newB);
 	}
 
@@ -824,37 +728,33 @@ public class BCP implements BCPConstant {
 				.collect(Collectors.toList());
 	}
 
-//	public static void main(String[] args) {
-//		// 明文
-//		BigInteger m1 = new BigInteger("22");
-//		BigInteger m2 = new BigInteger("-23");
-//		BigInteger m3 = new BigInteger("53");
-//
-//		// bcp参数
-//		BCP bcp = new BCP(256, 100);
-//		PP pp = bcp.getPP();
-//		BigInteger n = pp.getN();
-//		BigInteger g = pp.getG();
-//		BigInteger[] ha = keyGen(n, g);
-//		BigInteger h = ha[0];
-//		BigInteger a = ha[1];
-//
+	public static void main(String[] args) {
 //		// 密文
-//		BcpCiphertext c1 = BCP.enc(n, g, h, m1);
-//		BcpCiphertext c2 = BCP.enc(n, g, h, m2);
-//		BcpCiphertext c3 = BCP.enc(n, g, h, m3);
-//
-//		BcpCiphertext c12 = BCP.add(n, c1, c2);
-//		BcpCiphertext c123 = BCP.add(n, c12, c3);
-//
-//		BigInteger d12 = dec(n, a, c12);
-//		BigInteger d123 = dec(n, a, c123);
-//		System.out.println(d12);
-//		System.out.println(d123);
-//
-//		System.out.println(d12.modInverse(n));
-//		System.out.println(d12.divide(new BigInteger("2")));
-//		System.out.println(Arrays.toString(d12.divideAndRemainder(new BigInteger("2"))));
-//	}
+//		BcpCiphertext ciphertext = new BcpBlindCiphertext();
+//		ciphertext.setA(new BigInteger("3380002628831292291771134077437562380347264913825424861348978999006586061055803471218041860927913660261029544748986818542174703039002813495170770397406413965939057272752648579653889703145780743943633142907920822944845293115976687965485008987412131801700449247844070674234955261858885766536427486698590621974096613620936482971501508628913464638927922994560754140276972339658436152151813992162558236693032560064640741095579294637073356959878612846610852760779030346084250350682784410352092772304710312696052862221097996061768391210811230142907700274423863184315783419269280635237741714836749562833671169022676584686088017883448698470898239101973153884260762796483959874094617678078671772663327576761224849990254755424434714540352830773350125077245321853274482018232568455962015464707323759659269801564395539363334166759699148575297206864536640"));
+//		ciphertext.setB(new BigInteger("-1422792562833341657336527090627027917063339844020652352593672972659539161346081199920974757567516634797343011621663076512887752569655964710119534597737345639535716466322196797429762435832283940552845882643720075762208417335802408905132805456829274599093661282944372608065348916025003729464291251543670332950163761114097515514765696340014930754410059071444353570366654919799553201736774819430508004076490840079850274102527422489003132806082546539070147166588174318460810495269346749226432589114331796602416405952536593929157111733818843694146506390878658011740786881437999503618706067307923462531784220813724109125700671696519831361762897925268311975046388664293274397057881263736183043465761606082510219776152256050214007548057191990566355665418815890414412079131712669382161840996340974739554543228356533368915368567410763578030185846560697"));
+
+		// bcp参数
+		BCP bcp = new BCP(256, 100);
+		PP pp = bcp.getPP();
+		BigInteger n = pp.getN();
+//		BigInteger n = new BigInteger("1998020857175272540286015489115639250921162534406450841568234940423199720305111862380112065024408555421543552116677858785689575260349597815610966482322504769383128476601520173147567955828168890274951593873794758645090250733189822245342140383925782352778175173752193838540226381517185481919021956924842142069383809939206295519246231922756641158069000864370784356146150799122236234129501712438078797853397850928284026414589");
+		BigInteger g = pp.getG();
+//		BigInteger g = new BigInteger("1382383445975905178331747392552203234246042770010428999471755028399948986110031816107940355959127565009440533437213142625215901097519556734696196638860219917174592099395233086534809155438803861592928046710378726254587474149394696990796095912084093696271");
+		BcpKeyPair ha = keyGen(n, g);
+		BigInteger h = ha.getH();
+		BigInteger a = ha.getA();
+
+		BcpCiphertext enc = BCP.enc(n, g, h, new BigInteger("-10101"));
+		BcpCiphertext enc1 = BCP.enc(n, g, h, new BigInteger("101"));
+
+		MK mk = bcp.getMK();
+		BigInteger blindness = BCP.generateBlindness(n);
+		BcpBlindCiphertext bcpBlindCiphertext = BCP.blind(n, g, h, blindness, enc);
+		BcpCiphertext ciphertext = BCP.removeKeyProdBlind(n, g, h, blindness, bcpBlindCiphertext);
+		System.out.println("==============================================");
+		System.out.println(BCP.dec(n, a, BCP.add(n, enc, enc1)));
+		System.out.println("==============================================");
+	}
 
 }

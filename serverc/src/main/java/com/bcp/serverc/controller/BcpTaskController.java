@@ -1,5 +1,6 @@
 package com.bcp.serverc.controller;
 
+import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.util.Arrays;
 
@@ -89,7 +90,7 @@ public class BcpTaskController {
 	}
 
 	@PostMapping("/test")
-	public JsonResult test(@RequestBody JSONObject param){
+	public JsonResult test(@RequestBody JSONObject param) throws IOException {
 		bcpTaskSrv.test(param);
 		return JsonResult.ok();
 	}

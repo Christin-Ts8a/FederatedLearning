@@ -13,7 +13,12 @@ public class BcpUserModel {
 	 * 标识用户id
 	 */
 	private Long userId;
-	
+
+	/**
+	 * 用户名
+	 */
+	private String userName;
+
 	/**
 	 * 标识这是属于哪个任务的
 	 */
@@ -46,6 +51,14 @@ public class BcpUserModel {
 	private Integer userCount;
 
 	private String struct;
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
 
 	public String getStruct() {
 		return struct;

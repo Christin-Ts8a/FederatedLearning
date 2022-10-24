@@ -1,10 +1,13 @@
 package com.bcp.serverc.mapper;
 
 import com.bcp.serverc.model.Org;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
 import org.apache.ibatis.annotations.Param;
 import tk.mybatis.mapper.common.Mapper;
 
 import java.util.List;
+import java.util.Map;
 
 public interface OrgMapper extends Mapper<Org> {
 
@@ -20,5 +23,5 @@ public interface OrgMapper extends Mapper<Org> {
      * @param taskId
      * @return
      */
-    List<Org> queryAddressesByTaskId(@Param("taskId") Long taskId);
+    List<JSONObject> queryAddressesByTaskId(@Param("taskId") Long taskId);
 }

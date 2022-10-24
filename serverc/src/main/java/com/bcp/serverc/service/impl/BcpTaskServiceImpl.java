@@ -18,6 +18,10 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.SetUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -28,6 +32,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
@@ -116,47 +121,59 @@ public class BcpTaskServiceImpl {
 			task.setTaskG(pp.getG().toString());
 		}
 		bcpTaskMapper.updateByPrimaryKeySelective(task);
-
-		List<Org> orgList = orgMapper.queryAddressesByTaskId(taskId);
-		for (Org org : orgList) {
-			logger.info("broadcast the PP param");
-			// 2.将pp广播给在线客户端submitBstartBcpTask get the BCPcpTask
-			RestTemplate rest = new RestTemplate();
-			rest.getMessageConverters().add(new WXMappingJackson2HttpMessageConverter());
-			Integer result = rest.postForObject("http://" + org.getServerAddress() + "/receive/", pp, Integer.class);
-			if (result != null && result != 0) {
-				logger.error("setup failure");
-				retModel.setRetCode(500);
-				retModel.setRetMess("setup failure");
-				retModel.setRetValue("");
-				return retModel;
-			}
-			logger.info("broadcast result: " + result);
-		}
+		// 在进行训练时，下发的 task 中含有 N，G，K三个参数
+		List<JSONObject> orgList = orgMapper.queryAddressesByTaskId(taskId);
+//		for (Org org : orgList) {
+//			logger.info("broadcast the PP param");
+//			// 2.将pp广播给在线客户端submitBstartBcpTask get the BCPcpTask
+//			RestTemplate rest = new RestTemplate();
+//			rest.getMessageConverters().add(new WXMappingJackson2HttpMessageConverter());
+//			Integer result = rest.postForObject("http://" + org.getServerAddress() + "/receive/", pp, Integer.class);
+//			if (result != null && result != 0) {
+//				logger.error("setup failure");
+//				retModel.setRetCode(500);
+//				retModel.setRetMess("setup failure");
+//				retModel.setRetValue("");
+//				return retModel;
+//			}
+//			logger.info("broadcast result: " + result);
+//		}
 		logger.info("start training");
 		task.setCurrentRound(task.getCurrentRound());
 		bcpTaskMapper.updateByPrimaryKeySelective(task);
-		while (task.getComputeRounds().compareTo(task.getCurrentRound()) >= 0) {
+		JSONObject param = JSONObject.fromObject(task);
+		while (task.getComputeRounds().compareTo(task.getCurrentRound() + 1) >= 0) {
 			logger.info("current training round: " + task.getCurrentRound() + "/" + task.getComputeRounds());
-			for (Org org : orgList) {
-				logger.info("sending train request");
+			for (JSONObject org : orgList) {
+				param.put("userId", org.getLong("userId"));
+				param.put("userName", org.getString("userName"));
+				param.remove("paramPrecision");
+				param.remove("finishUser");
+				param.remove("finishTime");
+				param.remove("finishReason");
+				logger.info("sending train request: " + task);
 				RestTemplate rest = new RestTemplate();
 				rest.getMessageConverters().add(new WXMappingJackson2HttpMessageConverter());
-				Integer bcpUserModel = rest.postForObject("http://" + org.getServerAddress() + "/train_model/", task, Integer.class);
-//				// TODO 进行盲化 -> 聚合 -> 去盲化 -> 下发 -> 检查通信是否完成
-//				if (bcpUserModel != null) {
-//					submitBcpTask(bcpUserModel);
-//				} else {
-//					logger.error("train model failure");
-//					retModel.setRetCode(500);
-//					retModel.setRetMess("train model failure");
-//					return retModel;
-//				}
-				logger.info("bcpUserModel: " + bcpUserModel);
+				ResponseEntity<JSONObject> response = rest.postForEntity("http://127.0.0.1:8000/train_model/", param, JSONObject.class);
+				if (response.getBody() != null) {
+					Map<String,Class<?>> classMap = new HashMap<String,Class<?>>();
+					classMap.put("ciphertextList", BcpCiphertext.class);
+					BcpUserModel bcpUserModel = (BcpUserModel) JSONObject.toBean(response.getBody(), BcpUserModel.class, classMap);
+					logger.info("bcpUserModel: " + bcpUserModel);
+					submitBcpTask(bcpUserModel);
+				} else {
+					logger.error("train model failure");
+					retModel.setRetCode(500);
+					retModel.setRetMess("train model failure");
+					return retModel;
+				}
 			}
 			task.setCurrentRound(task.getCurrentRound() + 1);
 			bcpTaskMapper.updateByPrimaryKeySelective(task);
 		}
+		task.setCurrentRound(0);
+		task.setTaskState(BigDecimal.ZERO);
+		bcpTaskMapper.updateByPrimaryKeySelective(task);
 //		task.setFinishTime(new Date());
 //		bcpTaskMapper.updateByPrimaryKeySelective(task);
 //		TrainHistory trainHistory = new TrainHistory();
@@ -177,11 +194,15 @@ public class BcpTaskServiceImpl {
 	public void submitBcpTask(BcpUserModel userModel) {
 		// 需要获取的信息
 		Long userId = userModel.getUserId();
+		String userName = userModel.getUserName();
 		Long taskId = userModel.getTaskId();
 		BigInteger h = userModel.getH();
 
+		logger.info("submitBcpTask: " + "userId: "
+				+ userId + " userName: " + userName
+				+ " taskId: " + taskId);
+
 		// 1.检测是否结束
-		// TODO 结束后应该返回结束标志给外层函数
 		if (userModel.isStop()) {
 			logger.info("submitBcpTask training is stop");
 			// 若有用户上传数据时决定这一轮结束，则结束任务
@@ -191,7 +212,8 @@ public class BcpTaskServiceImpl {
 			return;
 		}
 		// 2.若不结束，则新增数据
-		BcpTask bcpTask = bcpTaskMapper.selectByPrimaryKey(taskId.toString());
+		BcpTask bcpTask = bcpTaskMapper.selectByPrimaryKey(taskId);
+		logger.info("submitBcpTask: " + bcpTask);
 		Integer currentRound = bcpTask.getCurrentRound();
 
 		insertBcpTaskCiphertext(bcpTask, userModel);
@@ -199,6 +221,7 @@ public class BcpTaskServiceImpl {
 		BcpTaskUser updTaskUser = new BcpTaskUser();
 		updTaskUser.setTaskId(taskId);
 		updTaskUser.setTaskUserId(userId);
+		updTaskUser.setTaskUserName(userName);
 		updTaskUser.setH(h.toString());
 		bcpTaskUserMapper.updateByPrimaryKeySelective(updTaskUser);
 
@@ -236,7 +259,7 @@ public class BcpTaskServiceImpl {
 		if (!SetUtils.isEqualSet(submittedUserNameSet, new HashSet<>(bcpTaskUserIdList))) {
 			// 若两个集合不同，则还存在未提交用户，不开始这一轮计算
 			logger.info("submitBcpTask there are some users haven't submitted data");
-//			return;
+			return;
 		}
 
 		// 4.开始这一轮计算，将开启单轮交互的操作放于一次提交中
@@ -357,43 +380,43 @@ public class BcpTaskServiceImpl {
 		bcpTaskMapper.updateByPrimaryKeySelective(nextRoundTask);
 
 		// 7 将结果发送给各个客户端
-		List<Org> orgListInfo = new ArrayList<>();
-
-		transDecResult.forEach((userModel) -> {
-			Org org1 = new Org();
-			org1.setId(userModel.getUserId());
-			Org orgInfo1 = orgMapper.selectOne(org1);
-			orgListInfo.add(orgInfo1);
-
-			BcpTask task = new BcpTask();
-			task.setTaskId(taskId);
-			userModel.setRound(bcpTaskMapper.selectOne(task).getComputeRounds());
-			Org org = new Org();
-			org.setId(userModel.getUserId());
-			Org orgInfo = orgMapper.selectOne(org);
-			BcpTaskCiphertext getB = new BcpTaskCiphertext();
-			getB.setTaskId(userModel.getTaskId());
-			List<BcpTaskCiphertext> temp = bcpTaskCiphertextMapper.select(getB);
-			userModel.setStruct(temp.get(0).getCiphertextStruct());
-			RestTemplate rest = new RestTemplate();
-			rest.getMessageConverters().add(new WXMappingJackson2HttpMessageConverter());
-			JsonResult result = rest.postForObject("http://" + orgInfo.getServerAddress() + "/train_tcga/", userModel, JsonResult.class);
-			logger.info("singleRound return the param to users, the result is : " + result);
-		});
-		String orgListAbc = "";
-		for (Org org : orgListInfo) {
-			orgListAbc += org.getOrgName() + ",";
-		}
-		orgListAbc.substring(0, orgListAbc.length() - 1);
-
-		TrainHistory trainHistory = new TrainHistory();
-		BcpTask bcpTaskRes = bcpTaskMapper.selectByPrimaryKey(taskId);
-		trainHistory.setTrainName(bcpTaskRes.getTaskName());
-		Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-		trainHistory.setFinishTime(timestamp);
-		trainHistory.setModelName(bcpTaskRes.getModelName());
-		trainHistory.setOrgList(orgListAbc);
-		trainHistoryMapper.insert(trainHistory);
+//		List<Org> orgListInfo = new ArrayList<>();
+//
+//		transDecResult.forEach((userModel) -> {
+//			Org org1 = new Org();
+//			org1.setId(userModel.getUserId());
+//			Org orgInfo1 = orgMapper.selectOne(org1);
+//			orgListInfo.add(orgInfo1);
+//
+//			BcpTask task = new BcpTask();
+//			task.setTaskId(taskId);
+//			userModel.setRound(bcpTaskMapper.selectOne(task).getComputeRounds());
+//			Org org = new Org();
+//			org.setId(userModel.getUserId());
+//			Org orgInfo = orgMapper.selectOne(org);
+//			BcpTaskCiphertext getB = new BcpTaskCiphertext();
+//			getB.setTaskId(userModel.getTaskId());
+//			List<BcpTaskCiphertext> temp = bcpTaskCiphertextMapper.select(getB);
+//			userModel.setStruct(temp.get(0).getCiphertextStruct());
+//			RestTemplate rest = new RestTemplate();
+//			rest.getMessageConverters().add(new WXMappingJackson2HttpMessageConverter());
+//			JsonResult result = rest.postForObject("http://" + orgInfo.getServerAddress() + "/train_tcga/", userModel, JsonResult.class);
+//			logger.info("singleRound return the param to users, the result is : " + result);
+//		});
+//		String orgListAbc = "";
+//		for (Org org : orgListInfo) {
+//			orgListAbc += org.getOrgName() + ",";
+//		}
+//		orgListAbc.substring(0, orgListAbc.length() - 1);
+//
+//		TrainHistory trainHistory = new TrainHistory();
+//		BcpTask bcpTaskRes = bcpTaskMapper.selectByPrimaryKey(taskId);
+//		trainHistory.setTrainName(bcpTaskRes.getTaskName());
+//		Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+//		trainHistory.setFinishTime(timestamp);
+//		trainHistory.setModelName(bcpTaskRes.getModelName());
+//		trainHistory.setOrgList(orgListAbc);
+//		trainHistoryMapper.insert(trainHistory);
 	}
 
 	/**
@@ -554,7 +577,8 @@ public class BcpTaskServiceImpl {
 		List<? extends BcpCiphertext> ciphertextList = userModel.getCiphertextList();
 		Long taskId = userModel.getTaskId();
 		BigInteger h = userModel.getH();
-		String orgCode = userModel.getUserId().toString();
+		String userName = userModel.getUserName();
+		Long userId = userModel.getUserId();
 
 		// 获取当前任务信息
 		if (bcpTask == null) {
@@ -565,7 +589,7 @@ public class BcpTaskServiceImpl {
 		// 1.先删掉该用户之前提交数据
 		BcpTaskCiphertext delCiphertextModel = new BcpTaskCiphertext();
 		delCiphertextModel.setTaskId(taskId);
-		delCiphertextModel.setTaskUserName(orgCode);
+		delCiphertextModel.setTaskUserName(userName);
 		delCiphertextModel.setTaskRound(currentRound);
 		bcpTaskCiphertextMapper.delete(delCiphertextModel);
 
@@ -577,7 +601,8 @@ public class BcpTaskServiceImpl {
 				// 设置本次密文内容
 				BcpTaskCiphertext bcpTaskCiphertext = new BcpTaskCiphertext();
 				bcpTaskCiphertext.setTaskId(taskId);
-				bcpTaskCiphertext.setTaskUserName(orgCode);
+				bcpTaskCiphertext.setTaskUserName(userName);
+				bcpTaskCiphertext.setTaskId(userId);
 				bcpTaskCiphertext.setTaskRound(currentRound);
 				bcpTaskCiphertext.setCiphertextOrder(new BigDecimal(i + 1));
 				// 密文信息
@@ -1043,11 +1068,23 @@ public class BcpTaskServiceImpl {
 		return resultList;
 	}
 
-	public void test(JSONObject param) {
+	public void test(JSONObject param) throws IOException {
 		RestTemplate rest = new RestTemplate();
 		rest.getMessageConverters().add(new WXMappingJackson2HttpMessageConverter());
-		PP pp = new PP();
-		List<Double> result = rest.postForObject("http://127.0.0.1:8000/train_model/", pp, List.class);
-		System.out.println(result);
+		ResponseEntity<JSONObject> result = rest.postForEntity("http://127.0.0.1:8000/train_model/", "", JSONObject.class);
+		System.out.println(JSONObject.fromObject(result.getBody()).getInt("userId"));
+	}
+
+	public static String[] getNullPropertyNames (Object source) {
+		final BeanWrapper src = new BeanWrapperImpl(source);
+		java.beans.PropertyDescriptor[] pds = src.getPropertyDescriptors();
+
+		Set<String> emptyNames = new HashSet<>();
+		for(java.beans.PropertyDescriptor pd : pds) {
+			Object srcValue = src.getPropertyValue(pd.getName());
+			if (srcValue == null) emptyNames.add(pd.getName());
+		}
+		String[] result = new String[emptyNames.size()];
+		return emptyNames.toArray(result);
 	}
 }

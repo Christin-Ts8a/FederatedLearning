@@ -22,8 +22,8 @@
     </where>
   </select>
 
-  <select id="queryAddressesByTaskId" parameterType="java.lang.Long" resultMap="BaseResultMap">
-    SELECT o.id, o.org_name, o.front_address, o.server_address
+  <select id="queryAddressesByTaskId" parameterType="java.lang.Long" resultType="net.sf.json.JSONObject">
+    SELECT btu.task_user_id AS userId, btu.task_user_name AS userName, o.id AS orgId, o.org_name AS orgName, o.server_address AS serverAddress
     FROM bcp_task_user AS btu LEFT JOIN `user` AS u ON btu.task_user_id = u.user_id
                               LEFT JOIN org AS o ON u.org_code = o.id
     WHERE btu.task_id = #{taskId}
