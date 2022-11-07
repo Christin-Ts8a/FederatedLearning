@@ -3,6 +3,7 @@ package com.bcp.serverc.controller;
 import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.util.Arrays;
+import java.util.Map;
 
 import com.bcp.general.util.JsonResult;
 import com.bcp.serverc.model.User;
@@ -44,9 +45,15 @@ public class BcpTaskController {
 	 * 
 	 * @return
 	 */
-	@RequestMapping(value = "/list", method = RequestMethod.GET)
-	public Object getTaskList(@RequestParam(name = "username", required = false) String username) {
-		Object ret = bcpTaskSrv.getTaskList(username, false);
+	@RequestMapping(value = "/list", method = RequestMethod.POST)
+	public Object getTaskList(@RequestBody JSONObject param) {
+		if (!param.containsKey("pageNum")) {
+			param.put("pageNum", 1);
+		}
+		if (!param.containsKey("pageSize")) {
+			param.put("pageSize", 10);
+		}
+		Object ret = bcpTaskSrv.getTaskList(param);
 
 		return ret;
 	}
@@ -66,8 +73,10 @@ public class BcpTaskController {
 	}
 
 	@RequestMapping(value = "/start", method = RequestMethod.POST)
-	public Object startTask(HttpServletRequest request, @RequestBody BcpTask taskArg) {
+	public Object startTask(HttpServletRequest request, @RequestBody JSONObject params) {
 		logger.info("start");
+		params.remove("createTime");
+		BcpTask taskArg = (BcpTask) JSONObject.toBean(params, BcpTask.class);
 		Object ret = bcpTaskSrv.startBcpTask(request, taskArg);
 		return ret;
 	}

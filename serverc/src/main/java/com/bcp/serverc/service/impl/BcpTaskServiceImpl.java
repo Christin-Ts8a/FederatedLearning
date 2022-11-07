@@ -6,19 +6,19 @@ import com.bcp.general.crypto.PP;
 import com.bcp.general.model.BcpCommunicateModel;
 import com.bcp.general.model.BcpUserModel;
 import com.bcp.general.model.RetModel;
-import com.bcp.general.util.JsonResult;
 import com.bcp.general.util.WXMappingJackson2HttpMessageConverter;
 import com.bcp.serverc.config.ServerProperties;
 import com.bcp.serverc.constant.CryptoConstant;
 import com.bcp.serverc.crypto.BCP4C;
 import com.bcp.serverc.mapper.*;
 import com.bcp.serverc.model.*;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import net.sf.json.JSONObject;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.SetUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import tk.mybatis.mapper.entity.Example;
 import tk.mybatis.mapper.entity.Example.Criteria;
-
 import javax.annotation.Resource;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -36,6 +35,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
+import java.util.Date;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -87,7 +87,7 @@ public class BcpTaskServiceImpl {
 		Long taskId = taskArg.getTaskId();// 要开启的任务id
 		// 查询出任务基本信息
 		BcpTask task = bcpTaskMapper.selectByPrimaryKey(taskId);
-		if (task == null || !BigDecimal.ZERO.equals(task.getTaskState())) {
+		if (task == null || task.getTaskState() != 0) {
 			// 若任务不存在或状态不为未开启
 			logger.info("startBcpTask task isn't exist or task is computing");
 			retModel.setRetMess("任务不存在或已开始，请检查任务");
@@ -111,10 +111,10 @@ public class BcpTaskServiceImpl {
 		logger.info("startBcpTask get the BCP param (pp:{n, g, k})");
 
 		// 批量更新本次任务状态
-		task.setStartTime(new Date());
+		task.setStartTime(new Date(System.currentTimeMillis()));
 		User loginUser = (User) request.getSession().getAttribute("SYSTEM_USER_SESSION");
 		task.setStartUser(loginUser.getUserId());
-		task.setTaskState(BigDecimal.ONE);
+		task.setTaskState(1);
 		if (BCP4C.isValidPP(pp)) {
 			task.setTaskN(pp.getN().toString());
 			task.setTaskK(pp.getK().toString());
@@ -123,21 +123,6 @@ public class BcpTaskServiceImpl {
 		bcpTaskMapper.updateByPrimaryKeySelective(task);
 		// 在进行训练时，下发的 task 中含有 N，G，K三个参数
 		List<JSONObject> orgList = orgMapper.queryAddressesByTaskId(taskId);
-//		for (Org org : orgList) {
-//			logger.info("broadcast the PP param");
-//			// 2.将pp广播给在线客户端submitBstartBcpTask get the BCPcpTask
-//			RestTemplate rest = new RestTemplate();
-//			rest.getMessageConverters().add(new WXMappingJackson2HttpMessageConverter());
-//			Integer result = rest.postForObject("http://" + org.getServerAddress() + "/receive/", pp, Integer.class);
-//			if (result != null && result != 0) {
-//				logger.error("setup failure");
-//				retModel.setRetCode(500);
-//				retModel.setRetMess("setup failure");
-//				retModel.setRetValue("");
-//				return retModel;
-//			}
-//			logger.info("broadcast result: " + result);
-//		}
 		logger.info("start training");
 		task.setCurrentRound(task.getCurrentRound());
 		bcpTaskMapper.updateByPrimaryKeySelective(task);
@@ -147,6 +132,7 @@ public class BcpTaskServiceImpl {
 			for (JSONObject org : orgList) {
 				param.put("userId", org.getLong("userId"));
 				param.put("userName", org.getString("userName"));
+				param.put("userCount", org.size());
 				param.remove("paramPrecision");
 				param.remove("finishUser");
 				param.remove("finishTime");
@@ -171,17 +157,26 @@ public class BcpTaskServiceImpl {
 			task.setCurrentRound(task.getCurrentRound() + 1);
 			bcpTaskMapper.updateByPrimaryKeySelective(task);
 		}
-		task.setCurrentRound(0);
-		task.setTaskState(BigDecimal.ZERO);
+		task.setFinishTime(new Date(System.currentTimeMillis()));
+		task.setTaskState(-1);
+		task.setCurrentRound(task.getComputeRounds());
 		bcpTaskMapper.updateByPrimaryKeySelective(task);
-//		task.setFinishTime(new Date());
-//		bcpTaskMapper.updateByPrimaryKeySelective(task);
-//		TrainHistory trainHistory = new TrainHistory();
-//		trainHistory.setModelName(task.getModelName());
-//		trainHistory.setTrainName(task.getTaskName());
-//		trainHistory.setOrgList(orgList.toString());
-//		trainHistory.setFinishTime(new Timestamp(System.currentTimeMillis()));
-//		trainHistoryMapper.insert(trainHistory);
+
+		StringBuilder orgId = new StringBuilder();
+		for (int i = 0; i < orgList.size(); i++) {
+			orgId.append(orgList.get(i).getLong("orgId")).append(",");
+		}
+		orgId.deleteCharAt(orgId.length() - 1);
+		TrainHistory trainHistory = new TrainHistory();
+		trainHistory.setModelName(task.getModelName());
+		trainHistory.setTrainName(task.getTaskName());
+		trainHistory.setOrgList(orgId.toString());
+		trainHistory.setFinishTime(new Timestamp(System.currentTimeMillis()));
+		trainHistoryMapper.insert(trainHistory);
+
+		logger.error("train model finished");
+		retModel.setRetCode(200);
+		retModel.setRetMess("train model finished");
 
 		return retModel;
 	}
@@ -241,16 +236,16 @@ public class BcpTaskServiceImpl {
 		example.setOrderByClause("task_id, task_user_name, ciphertext_order");
 		List<BcpTaskCiphertext> bcpTaskCiphertextList = bcpTaskCiphertextMapper.selectByExample(example);
 
-		// userId->user当前轮密文，用userId聚合，查看用户是否齐全
+		// userName->user当前轮密文，userName，查看用户是否齐全
 		HashMap<String, List<BcpTaskCiphertext>> bcpTaskCiphertextMap = new HashMap<>();
 		for (BcpTaskCiphertext bcpTaskCiphertext : bcpTaskCiphertextList) {
 			String taskUserName = bcpTaskCiphertext.getTaskUserName();
 			List<BcpTaskCiphertext> curCiphertextList = bcpTaskCiphertextMap.get(taskUserName);
 			if (curCiphertextList == null) {
 				curCiphertextList = new ArrayList<>();
+				curCiphertextList.add(bcpTaskCiphertext);
 				bcpTaskCiphertextMap.put(taskUserName, curCiphertextList);
 			}
-			curCiphertextList.add(bcpTaskCiphertext);
 		}
 		// 已提交的用户
 		Set<String> submittedUserNameSet = bcpTaskCiphertextMap.keySet();
@@ -263,7 +258,7 @@ public class BcpTaskServiceImpl {
 		}
 
 		// 4.开始这一轮计算，将开启单轮交互的操作放于一次提交中
-		ArrayList<BcpUserModel> userModelList = new ArrayList<BcpUserModel>();
+		List<BcpUserModel> userModelList = new ArrayList<BcpUserModel>();
 		for (BcpTaskUser bcpTaskUser : bcpTaskUserList) {
 			BcpUserModel bcpUserModel = new BcpUserModel();
 			String taskUserName = bcpTaskUser.getTaskUserName();
@@ -318,11 +313,13 @@ public class BcpTaskServiceImpl {
 	public void singleRound(BcpTask bcpTask, List<BcpUserModel> userModelList, Long userId) {
 		// 1计算出PK
 		BigInteger N = new BigInteger(bcpTask.getTaskN());
+		BigInteger K = new BigInteger(bcpTask.getTaskK());
+		BigInteger G = new BigInteger(bcpTask.getTaskG());
 		List<BigInteger> pkLst = userModelList.stream().map(BcpUserModel::getH).collect(Collectors.toList());
 		BigInteger PK = BCP4C.genPK(N, pkLst);
 		Long taskId = bcpTask.getTaskId();
 		Integer computeRounds = bcpTask.getComputeRounds();
-		PP pp = new PP(N, null, null);
+		PP pp = new PP(N, K, G);
 
 		// 2 keyProd 把用户用各自公钥加密的密文转换为用公共公钥PK加密
 		BcpCommunicateModel keyProdArg = new BcpCommunicateModel();
@@ -367,18 +364,6 @@ public class BcpTaskServiceImpl {
 		// 5 计算完成结果入库
 		insertBcpTaskResult(bcpTask, transDecResult);
 
-		// 6 当前轮数加一
-		Integer nextRound = bcpTask.getCurrentRound() + 1;
-		if (nextRound.compareTo(computeRounds) >= 0) {
-			// 加一后若大于了最大轮数，则结束任务
-			bcpTask.setFinishUser(userId);
-			finishBcpTask(bcpTask);
-		}
-		BcpTask nextRoundTask = new BcpTask();
-		nextRoundTask.setCurrentRound(nextRound);
-		nextRoundTask.setTaskId(taskId);
-		bcpTaskMapper.updateByPrimaryKeySelective(nextRoundTask);
-
 		// 7 将结果发送给各个客户端
 //		List<Org> orgListInfo = new ArrayList<>();
 //
@@ -408,15 +393,6 @@ public class BcpTaskServiceImpl {
 //			orgListAbc += org.getOrgName() + ",";
 //		}
 //		orgListAbc.substring(0, orgListAbc.length() - 1);
-//
-//		TrainHistory trainHistory = new TrainHistory();
-//		BcpTask bcpTaskRes = bcpTaskMapper.selectByPrimaryKey(taskId);
-//		trainHistory.setTrainName(bcpTaskRes.getTaskName());
-//		Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-//		trainHistory.setFinishTime(timestamp);
-//		trainHistory.setModelName(bcpTaskRes.getModelName());
-//		trainHistory.setOrgList(orgListAbc);
-//		trainHistoryMapper.insert(trainHistory);
 	}
 
 	/**
@@ -430,7 +406,7 @@ public class BcpTaskServiceImpl {
 		// 获取基本信息
 		BigInteger PK = keyProdArg.getPK();
 		BigInteger N = new BigInteger(bcpTask.getTaskN());
-		BigInteger g = new BigInteger(bcpTask.getTaskG());
+		BigInteger G = new BigInteger(bcpTask.getTaskG());
 
 		String sHost = sProperties.getsHost();
 		String sPort = sProperties.getsPort();
@@ -447,11 +423,11 @@ public class BcpTaskServiceImpl {
 		List<BcpUserModel> bcpUserModelList = keyProdArg.getUserModelList();
 		for (BcpUserModel bcpUserModel : bcpUserModelList) {
 			// 基本信息
-			BigInteger h = bcpUserModel.getH();
+			BigInteger H = bcpUserModel.getH();
 			List<? extends BcpCiphertext> ciphertextList = bcpUserModel.getCiphertextList();
 
 			// 加盲
-			List<BcpBlindCiphertext> keyProdBlindCiphertextList = BCP4C.keyProdBlind(N, g, h, ciphertextList);
+			List<BcpBlindCiphertext> keyProdBlindCiphertextList = BCP4C.keyProdBlind(N, G, H, ciphertextList);
 
 			// 覆盖原有密文
 			bcpUserModel.setCiphertextList(keyProdBlindCiphertextList);
@@ -488,7 +464,7 @@ public class BcpTaskServiceImpl {
 				BigInteger blindness = blindCiphertextOnH.getBlindness();// 盲
 
 				// 解盲后的用PK加密的用户密文
-				BcpCiphertext ciphertextOnPK = BCP4C.removeKeyProdBlind(N, g, PK, blindness, blindCiphertextOnPK);
+				BcpCiphertext ciphertextOnPK = BCP4C.removeKeyProdBlind(N, G, PK, blindness, blindCiphertextOnPK);
 
 				ciphertextOnPKList.add(ciphertextOnPK);
 			}
@@ -578,11 +554,10 @@ public class BcpTaskServiceImpl {
 		Long taskId = userModel.getTaskId();
 		BigInteger h = userModel.getH();
 		String userName = userModel.getUserName();
-		Long userId = userModel.getUserId();
 
 		// 获取当前任务信息
 		if (bcpTask == null) {
-			bcpTask = bcpTaskMapper.selectByPrimaryKey(taskId.toString());
+			bcpTask = bcpTaskMapper.selectByPrimaryKey(taskId);
 		}
 		Integer currentRound = bcpTask.getCurrentRound();
 
@@ -602,7 +577,6 @@ public class BcpTaskServiceImpl {
 				BcpTaskCiphertext bcpTaskCiphertext = new BcpTaskCiphertext();
 				bcpTaskCiphertext.setTaskId(taskId);
 				bcpTaskCiphertext.setTaskUserName(userName);
-				bcpTaskCiphertext.setTaskId(userId);
 				bcpTaskCiphertext.setTaskRound(currentRound);
 				bcpTaskCiphertext.setCiphertextOrder(new BigDecimal(i + 1));
 				// 密文信息
@@ -693,8 +667,8 @@ public class BcpTaskServiceImpl {
 
 		BcpTask finishTask = new BcpTask();
 		finishTask.setTaskId(taskId);
-		finishTask.setTaskState(new BigDecimal(2));
-		finishTask.setFinishTime(new Date());
+		finishTask.setTaskState(-1);
+		finishTask.setFinishTime(new Date(System.currentTimeMillis()));
 		finishTask.setFinishUser(finishUserName);
 		bcpTaskMapper.updateByPrimaryKeySelective(finishTask);
 	}
@@ -712,9 +686,10 @@ public class BcpTaskServiceImpl {
 	public Object createBcpTask(HttpServletRequest request, BcpTask bcpTask) {
 		// 1.设置基础信息，id数据库自动生成创建时不传
 		logger.info("createBcpTask");
+		String username = "";
 		for (Cookie cookie : request.getCookies()) {
 			if (cookie.getName().equals("username")) {
-				String username = cookie.getValue();
+				username = cookie.getValue();
 				System.out.println("username: " + username);
 			}
 		}
@@ -725,9 +700,9 @@ public class BcpTaskServiceImpl {
 		bcpTask.setCurrentRound(0);// 默认第1轮为开始
 		bcpTask.setCreateUser(currentLoginUserId);
 		bcpTask.setUpdateUser(currentLoginUserId);
-		bcpTask.setCreateTime(new Date());
-		bcpTask.setUpdateTime(new Date());
-		bcpTask.setTaskState(BigDecimal.ZERO);
+		bcpTask.setCreateTime(new Date(System.currentTimeMillis()));
+		bcpTask.setUpdateTime(new Date(System.currentTimeMillis()));
+		bcpTask.setTaskState(0);
 		bcpTask.setTaskId(null);// 主键要自增，前台传的置为空
 		if (bcpTask.getTaskKappa() == null) {
 			// 默认kappa和certainty
@@ -749,7 +724,7 @@ public class BcpTaskServiceImpl {
 		logger.info("createBcpTask BCP param generated");
 
 		// 3.设置被邀请人信息
-		insBcpTaskUser(taskId, bcpTask.getTaskUserList());
+		insBcpTaskUser(taskId, username, bcpTask.getTaskUserList());
 
 		RetModel retModel = new RetModel();
 		retModel.setRetCode(200);
@@ -772,6 +747,13 @@ public class BcpTaskServiceImpl {
 	public Object updateBcpTask(HttpServletRequest request, BcpTask bcpTask, boolean setPP) {
 		RetModel retModel = new RetModel();
 		Long taskId = bcpTask.getTaskId();
+		String username = "";
+		for (Cookie cookie : request.getCookies()) {
+			if (cookie.getName().equals("username")) {
+				username = cookie.getValue();
+				System.out.println("username: " + username);
+			}
+		}
 		if (taskId == null) {
 			retModel.setRetCode(-1);
 			retModel.setRetMess("Task Id can't be null");
@@ -790,7 +772,7 @@ public class BcpTaskServiceImpl {
 		// 1.若未开始则可以修改
 		Long currentLoginUserId = ((User)request.getSession()).getUserId();
 		bcpTask.setUpdateUser(currentLoginUserId);
-		bcpTask.setUpdateTime(new Date());
+		bcpTask.setUpdateTime(new Date(System.currentTimeMillis()));
 		bcpTask.setCurrentRound(0);// 默认第1轮为开始
 
 		// 2.根据条件是否设置pp参数
@@ -811,7 +793,7 @@ public class BcpTaskServiceImpl {
 		bcpTaskMapper.updateByPrimaryKeySelective(bcpTask);
 
 		// 3.设置被邀请人信息
-		insBcpTaskUser(taskId, bcpTask.getTaskUserList());
+		insBcpTaskUser(taskId, username, bcpTask.getTaskUserList());
 
 		retModel.setRetCode(0);
 		retModel.setRetMess("update success");
@@ -887,90 +869,26 @@ public class BcpTaskServiceImpl {
 	/**
 	 * 查询指定用户参与的任务 不传则查询全部taskId
 	 *
-	 * @param username
 	 *            对应的用户参与的任务
-	 * @param unfinished
 	 *            在查询指定用户的前提下，是否只查询未完成的任务
 	 * @return
+	 * @param param
 	 */
-	public List<BcpTask> getTaskList(String username, boolean unfinished) {
+	public PageInfo<JSONObject> getTaskList(JSONObject param) {
 		// 需要返回的任务列表
-		List<BcpTask> taskList = new ArrayList<>();
-
-		// 查询全部参与者并映射到每个任务
-		List<BcpTaskUser> taskUserList = null;
-
-		if (username != null) {
-			// 若传userid，则只查询该用户参与的任务
-			BcpTaskUser selTaskUser = new BcpTaskUser();
-			selTaskUser.setTaskUserName(username);
-			List<BcpTaskUser> involvedTaskUserList = bcpTaskUserMapper.select(selTaskUser);
-			if (CollectionUtils.isEmpty(involvedTaskUserList)) {
-				// 若没有有效任务id
-				return taskList;
-			}
-			// 获得去重后的参与任务id集合
-			Set<Long> involvedTaskIdSet = involvedTaskUserList.stream().map(BcpTaskUser::getTaskId)
-					.collect(Collectors.toSet());
-
-			// 查询参与的任务明细
-			Example taskExample = new Example(BcpTask.class);
-			Criteria taskCriteria = taskExample.createCriteria();
-			taskCriteria.andIn("taskId", involvedTaskIdSet);
-			if (unfinished) {
-				// 若查询未完成的，则去掉已完成的
-				taskCriteria.andNotEqualTo("taskState", 2);
-			}
-			taskList = bcpTaskMapper.selectByExample(taskExample);
-			if (CollectionUtils.isEmpty(taskList)) {
-				// 若没有有效任务
-				return taskList;
-			}
-			if (unfinished) {
-				// 若查询未完成任务，则更新任务id列表，去除已完成任务
-				involvedTaskIdSet = taskList.stream().map(BcpTask::getTaskId).collect(Collectors.toSet());
-			}
-
-			// 查询指定任务的参与者
-			Example taskUserExample = new Example(BcpTaskUser.class);
-			Criteria taskUserCriteria = taskUserExample.createCriteria();
-			taskUserCriteria.andIn("taskId", involvedTaskIdSet);
-			taskUserList = bcpTaskUserMapper.selectByExample(taskUserExample);
-		} else {
-			// 查询全部任务
-			taskList = bcpTaskMapper.selectAll();
-			// 查询全部参与者
-			taskUserList = bcpTaskUserMapper.selectAll();
-		}
-
-		// taskId -> 任务参与者
-		Map<Long, List<BcpTaskUser>> taskId2TaskUserMap = new HashMap<>();
-		taskUserList.forEach((taskUser) -> {
-			Long taskId = taskUser.getTaskId();
-			List<BcpTaskUser> subTaskUserList = taskId2TaskUserMap.get(taskId);
-			if (subTaskUserList == null) {
-				subTaskUserList = new ArrayList<>();
-				taskId2TaskUserMap.put(taskId, subTaskUserList);
-			}
-			subTaskUserList.add(taskUser);
-		});
-
-		// 为每个任务设置参与者列表
-		taskList.forEach((task) -> {
-			List<BcpTaskUser> subTaskUserList = taskId2TaskUserMap.get(task.getTaskId());
-			task.setTaskUserList(subTaskUserList);
-		});
-
-		return taskList;
+		logger.info("getTaskList: " + param);
+		PageHelper.startPage(param.getInt("pageNum"), param.getInt("pageSize"));
+		List<JSONObject> result = bcpTaskMapper.queryTaskByConditions(param);
+		return new PageInfo<>(result);
 	}
 
 	/**
 	 * 提出创建bcp任务时新增邀请人的方法
-	 *
-	 * @param taskId
+	 *  @param taskId
+	 * @param username
 	 * @param taskUserList
 	 */
-	public void insBcpTaskUser(Long taskId, List<BcpTaskUser> taskUserList) {
+	public void insBcpTaskUser(Long taskId, String username, List<BcpTaskUser> taskUserList) {
 		logger.info("insBcpTaskUser");
 		if (CollectionUtils.isNotEmpty(taskUserList)) {
 			// 获取用户id集合，若不包含当前登录用户则加上
@@ -986,6 +904,7 @@ public class BcpTaskServiceImpl {
 			// 用set先删后增
 			BcpTaskUser insTaskUser = new BcpTaskUser();
 			insTaskUser.setTaskId(taskId);
+			insTaskUser.setTaskUserName(username);
 			taskUserIdSet.forEach((taskUserId) -> {
 				insTaskUser.setTaskUserId(taskUserId);
 				bcpTaskUserMapper.insert(insTaskUser);

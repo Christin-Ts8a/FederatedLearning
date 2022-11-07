@@ -53,15 +53,17 @@ public class BCP4C implements BCPConstant {
 		BigInteger A = g.modPow(r, N2);
 
 		BigInteger B1 = h.modPow(r, N2);
-		BigInteger B2 = m.multiply(N).add(BigInteger.ONE).mod(N2);
-		BigInteger B = B1.multiply(B2).mod(N2);
+		BigInteger temp = m.multiply(N).add(BigInteger.ONE);
+		BigInteger B2 = temp.subtract(temp.divideAndRemainder(N2)[0].multiply(N2));
+		BigInteger B;
+		if (m.compareTo(BigInteger.ZERO) < 0) {
+			B = B1.multiply(B2).mod(N2).subtract(N2);
+		} else {
+			B = B1.multiply(B2).mod(N2);
+		}
 
 		return new BcpCiphertext(A, B);
 	}
-
-	// public static BcpCiphertext enc(PP pp, BigInteger h, BigInteger m) {
-	// return enc(pp.getN(), pp.getG(), h, m);
-	// }
 
 	/**
 	 * 
@@ -80,9 +82,19 @@ public class BCP4C implements BCPConstant {
 		BigInteger InverseA = A.modInverse(N2);// 是否是A模N2的逆元论文中并未说明
 
 		BigInteger tempA = InverseA.modPow(a, N2);
-		BigInteger tempB = B.mod(N2);
-		BigInteger tempC = tempA.multiply(tempB).mod(N2);
-		BigInteger tempD = tempC.subtract(BigInteger.ONE.mod(N2)).mod(N2);
+		BigInteger tempB;
+		BigInteger tempC;
+		BigInteger tempD;
+		if (B.compareTo(BigInteger.ZERO) < 0) {
+			tempB = B.mod(N2).subtract(N2);
+			tempC = tempA.multiply(tempB).mod(N2).subtract(N2);
+			tempD = tempC.subtract(BigInteger.ONE.mod(N2)).mod(N2).subtract(N2);
+		}
+		else {
+			tempB = B.mod(N2);
+			tempC = tempA.multiply(tempB).mod(N2);
+			tempD = tempC.subtract(BigInteger.ONE.mod(N2)).mod(N2);
+		}
 		return tempD.divide(N);
 	}
 
@@ -117,9 +129,32 @@ public class BCP4C implements BCPConstant {
 		BigInteger delta = mN.modInverse(N);
 		BigInteger gamma = amodN.multiply(rmodN).mod(N);
 
-		BigInteger tempm = B.modPow(mN, N2).multiply(g.modInverse(N2).modPow(gamma.multiply(mN), N2)).mod(N2)
-				.subtract(BigInteger.ONE.mod(N2)).mod(N2);
-		return tempm.multiply(delta).divide(N).mod(N);
+
+		BigInteger result;
+		if (B.compareTo(BigInteger.ZERO) < 0) {
+			BigInteger bModPowMN = B.modPow(mN, N2).subtract(N2);
+			BigInteger denominator = bModPowMN
+					.multiply(g.modInverse(N2).modPow(gamma.multiply(mN), N2))
+					.subtract(BigInteger.ONE.mod(N2))
+					.mod(N2)
+					.subtract(N2);
+			result = denominator
+					.multiply(delta)
+					.divide(N)
+					.mod(N)
+					.subtract(N);
+		} else {
+			BigInteger tempm = B.modPow(mN, N2)
+					.multiply(g.modInverse(N2).modPow(gamma.multiply(mN), N2))
+					.mod(N2)
+					.subtract(BigInteger.ONE.mod(N2))
+					.mod(N2);
+			result = tempm
+					.multiply(delta)
+					.divide(N)
+					.mod(N);
+		}
+		return result;
 	}
 
 	public static String[] countHM(double s) {
@@ -158,7 +193,12 @@ public class BCP4C implements BCPConstant {
 	public static BcpCiphertext add(BigInteger N, BcpCiphertext a, BcpCiphertext b) {
 		BigInteger N2 = N.multiply(N);
 		BigInteger newA = a.getA().multiply(b.getA()).mod(N2);
-		BigInteger newB = a.getB().multiply(b.getB()).mod(N2);
+		BigInteger newB;
+		if (a.getB().compareTo(BigInteger.ZERO) < 0 ||b.getB().compareTo(BigInteger.ZERO) < 0) {
+			newB = a.getB().multiply(b.getB()).mod(N2).subtract(N2);
+		} else {
+			newB = a.getB().multiply(b.getB()).mod(N2);
+		}
 		return new BcpCiphertext(newA, newB);
 	}
 

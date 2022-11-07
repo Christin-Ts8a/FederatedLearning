@@ -26,4 +26,33 @@
     <result column="task_k" jdbcType="VARBINARY" property="taskK" />
     <result column="task_g" jdbcType="VARBINARY" property="taskG" />
   </resultMap>
+
+  <resultMap id="taskListVO" type="net.sf.json.JSONObject">
+    <id column="taskId" jdbcType="BIGINT" property="taskId" />
+    <result column="taskName" jdbcType="VARCHAR" property="taskName" />
+    <result column="createUser" jdbcType="BIGINT" property="createUser" />
+    <result column="createTime" jdbcType="TIMESTAMP" property="createTime" javaType="java.lang.String" />
+    <result column="taskState" jdbcType="VARCHAR" property="taskState" />
+    <result column="modelName" jdbcType="VARCHAR" property="modelName" />
+    <result column="orgNameList" jdbcType="VARCHAR" property="orgNameList" />
+  </resultMap>
+
+  <select id="queryTaskByConditions" resultMap="taskListVO" parameterType="java.util.Map">
+    SELECT bcp_task.task_id AS taskId, bcp_task.task_name AS taskName,
+           bcp_task.create_time AS createTime, bcp_task.task_state AS taskState,
+           bcp_task.model_name AS modelName, GROUP_CONCAT(org.org_name) AS orgNameList,
+           bcp_task.create_user AS createUser
+    FROM bcp_task LEFT JOIN bcp_task_user ON bcp_task.task_id = bcp_task_user.task_id
+                  LEFT JOIN `user` ON bcp_task_user.task_user_id = `user`.user_id
+                  LEFT JOIN org ON `user`.org_code = org.id
+    <where>
+      <if test="params.taskName != null and params.taskName != ''">
+        bcp_task.task_name LIKE CONCAT('%', #{params.taskName}, '%')
+      </if>
+      <if test="params.orgList != null and params.orgList != ''">
+        AND INSTR(#{params.orgList}, org.id)
+      </if>
+    </where>
+    GROUP BY bcp_task.task_id
+  </select>
 </mapper>

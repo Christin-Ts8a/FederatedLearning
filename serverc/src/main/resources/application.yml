@@ -12,9 +12,9 @@ spring:
 #    url: jdbc:mysql://rm-2zewnss316uzyzo66wo.mysql.rds.aliyuncs.com:3306/bcp_server_c?characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
 #    username: pub_account
 #    password: Pub_account
-    url: jdbc:mysql://34.148.171.165:3306/bcp_server_c?characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/bcp_server_c?characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
-    password: Admin@123
+    password: Qq123903
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 mybatis:
@@ -26,6 +26,6 @@ mybatis:
     map-underscore-to-camel-case: true
 
 # 打印sql执行
-#logging:
-#  level:
-#    com.bcp.serverc.mapper : debug
+logging:
+  level:
+    com.bcp.serverc.mapper : debug

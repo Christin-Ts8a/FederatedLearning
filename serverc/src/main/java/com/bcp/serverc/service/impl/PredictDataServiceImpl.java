@@ -48,17 +48,15 @@ public class PredictDataServiceImpl implements PredictDataService {
 
     @Override
     public boolean add(HttpServletRequest request, PredictData param) {
-        PredictData predictData = new PredictData();
-        predictData.setPredictDataName(param.getPredictDataName());
-        if (predictDataMapper.selectOne(predictData) != null) {
+        if (predictDataMapper.selectOne(param) != null) {
             return false;
         }
         User loginUser = (User) request.getSession().getAttribute("SYSTEM_USER_SESSION");
         param.setCreateUser(loginUser.getUsername());
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
         param.setCreateTime(timestamp);
-        int result = predictDataMapper.insert(param);
-        return result == 1;
+        System.out.println(param);
+        return predictDataMapper.insert(param) == 1;
     }
 
     @Override

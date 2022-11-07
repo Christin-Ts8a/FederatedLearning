@@ -37,13 +37,14 @@ public class TrainHistoryImpl implements TrainHistoryService {
             SimpleDateFormat sdf = new SimpleDateFormat(strDateFormat);
             map.put("finishTime", sdf.format(date));
             String orgList = trainHistory.getOrgList();
-//            String[] split = orgList.split(",");
-//            String orgNameList = "";
-//            for (int i = 0; i < split.length - 1; i++) {
-//                String orgName = orgMapper.selectByPrimaryKey(split[i]).getOrgName();
-//                orgNameList += orgName + ",";
-//            }
-//            orgNameList = orgNameList.substring(0, orgNameList.length() - 1);
+            String[] split = orgList.split(",");
+            String orgNameList = "";
+            for (int i = 0; i < split.length; i++) {
+                String orgName = orgMapper.selectByPrimaryKey(split[i]).getOrgName();
+                orgNameList += orgName + ",";
+            }
+            orgNameList = orgNameList.substring(0, orgNameList.length() - 1);
+            map.put("orgNameList", orgNameList);
             map.put("orgList", orgList);
             result.add(map);
         }

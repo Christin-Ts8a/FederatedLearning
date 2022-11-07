@@ -3,9 +3,7 @@ package com.bcp.serverc.model;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
-
 import javax.persistence.*;
-
 import io.swagger.annotations.ApiModelProperty;
 import tk.mybatis.mapper.annotation.KeySql;
 
@@ -31,7 +29,7 @@ public class BcpTask {
      */
     @Column(name = "task_state")
     @ApiModelProperty(hidden = true)
-    private BigDecimal taskState;
+    private Integer taskState;
 
     /**
      * 最大交互轮数,若为null则无限轮,无限的情况下,有一个客户端发出收敛信号,即代表全体收敛
@@ -148,14 +146,6 @@ public class BcpTask {
     @ApiModelProperty(hidden = true)
     private String taskG;
 
-    public String getModelName() {
-        return modelName;
-    }
-
-    public void setModelName(String modelName) {
-        this.modelName = modelName;
-    }
-
     /**
      * 参与者列表
      */
@@ -201,12 +191,20 @@ public class BcpTask {
         this.taskName = taskName == null ? null : taskName.trim();
     }
 
+    public String getModelName() {
+        return modelName;
+    }
+
+    public void setModelName(String modelName) {
+        this.modelName = modelName;
+    }
+
     /**
      * 获取任务状态(0:未开始;1:已开始;2:已完成;3:已退回)
      *
      * @return task_state - 任务状态(0:未开始;1:已开始;2:已完成;3:已退回)
      */
-    public BigDecimal getTaskState() {
+    public Integer getTaskState() {
         return taskState;
     }
 
@@ -215,7 +213,7 @@ public class BcpTask {
      *
      * @param taskState 任务状态(0:未开始;1:已开始;2:已完成;3:已退回)
      */
-    public void setTaskState(BigDecimal taskState) {
+    public void setTaskState(Integer taskState) {
         this.taskState = taskState;
     }
 

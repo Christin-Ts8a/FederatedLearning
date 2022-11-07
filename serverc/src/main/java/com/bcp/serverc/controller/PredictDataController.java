@@ -7,13 +7,13 @@ import com.bcp.serverc.service.PredictDataService;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import net.sf.json.JSONObject;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +26,12 @@ public class PredictDataController {
 
     @PostMapping("/add")
     public JsonResult add(HttpServletRequest request, @RequestBody PredictData param) {
+//        Cookie[] cookie = request.getCookies();
+//        for (int i = 0; i < cookie.length; i++) {
+//            if ("userId".equals(cookie[i])) {
+//                param.setCreateUser(cookie[i].getValue());
+//            }
+//        }
         boolean result = predictDataService.add(request, param);
         return result ? JsonResult.ok() : JsonResult.errorMsg("添加失败");
     }
@@ -48,8 +54,6 @@ public class PredictDataController {
 
     @PostMapping("/delete")
     public JsonResult delete(HttpServletRequest request, @RequestBody PredictData param) {
-        User loginUser = (User) request.getSession().getAttribute("SYSTEM_USER_SESSION");
-        param.setCreateUser(loginUser.getUsername());
         boolean result = predictDataService.delete(request, param);
         return result ? JsonResult.ok() : JsonResult.errorMsg("删除失败");
     }
